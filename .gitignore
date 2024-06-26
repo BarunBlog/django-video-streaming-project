@@ -166,4 +166,4 @@ cython_debug/
 segments/
 
 # Video files
-.mp4
+*.mp4
