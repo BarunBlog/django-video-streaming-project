@@ -1,9 +1,11 @@
-FROM python:3.10
+FROM python:3.10-alpine
 
 # Install FFmpeg and other necessary packages
-RUN apt-get update && apt-get install -y \
+RUN apk update && apk add --no-cache \
     ffmpeg \
-    make
+    make \
+    build-base \
+    linux-headers
 
 WORKDIR /app
 
