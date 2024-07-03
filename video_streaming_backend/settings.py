@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 from datetime import timedelta
+from celery import Celery
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -23,7 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')
+SECRET_KEY = os.environ.get('SECRET_KEY', default="unsafe-secret")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', default=0)
@@ -45,6 +46,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
+    'django_celery_results',
 
     # local apps
     'stream_video',
@@ -199,3 +201,23 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = ('content-type', 'accept', 'accept-encoding', 'authorization', 'Authorization',
                       'Custom-User-Agent', 'media_type', 'dnt', 'origin', 'user-agent', 'x-csrftoken',
                       'x-requested-with')
+
+# RabbitMQ configurations
+RABBITMQ = {
+    "PROTOCOL": "amqp",  # in prod change with "amqps"
+    "HOST": os.environ.get("RABBITMQ_HOST", "localhost"),
+    "PORT": os.environ.get("RABBITMQ_PORT", 5672),
+    "USER": os.environ.get("RABBITMQ_USER", "guest"),
+    "PASSWORD": os.environ.get("RABBITMQ_PASSWORD", "guest"),
+}
+
+BROKER_URL = f"{RABBITMQ['PROTOCOL']}://{RABBITMQ['USER']}:{RABBITMQ['PASSWORD']}@{RABBITMQ['HOST']}:{RABBITMQ['PORT']}"
+
+# Celery configurations
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TASK_SERIALIZER = 'json'
+
+# to use the database
+CELERY_RESULT_BACKEND = "django-db"
+CELERY_CACHE_BACKEND = 'django-cache'

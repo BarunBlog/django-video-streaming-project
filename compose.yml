@@ -1,8 +1,23 @@
 services:
+
+  # RabbitMQ
+  rabbit:
+    hostname: rabbit
+    image: rabbitmq:3.6.9
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    ports:
+      - "5673:5672"
+      - "15672:15672"
+
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: video-streaming-backend
     restart: unless-stopped
+    command: sh ./run_web.sh
     volumes:
       - .:/app
     ports:
@@ -10,6 +25,23 @@ services:
     environment:
       - DEBUG=${DEBUG}
       - SECRET_KEY=${SECRET_KEY}
+    links:
+      - rabbit
+
+  # Celery worker
+  worker:
+      build:
+          context: .
+          dockerfile: Dockerfile
+      environment:
+          - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}
+      command: sh ./run_celery.sh
+      volumes:
+          - .:/code:Z
+      links:
+          - rabbit
+      depends_on:
+          - rabbit
 
 networks:
   default:
