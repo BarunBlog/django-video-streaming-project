@@ -8,10 +8,10 @@ class Video(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    thumbnail = models.URLField(max_length=255)
+    thumbnail = models.ImageField(upload_to="stream_video/images/")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    mpd_file_url = models.URLField(max_length=255)
+    mpd_file_url = models.URLField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.title

@@ -3,7 +3,7 @@ services:
   # RabbitMQ
   rabbit:
     hostname: rabbit
-    image: rabbitmq:3.6.9
+    image: rabbitmq:3.6.9-management
     environment:
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
@@ -25,6 +25,7 @@ services:
     environment:
       - DEBUG=${DEBUG}
       - SECRET_KEY=${SECRET_KEY}
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}
     links:
       - rabbit
 
@@ -37,7 +38,7 @@ services:
           - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}
       command: sh ./run_celery.sh
       volumes:
-          - .:/code:Z
+          - .:/app
       links:
           - rabbit
       depends_on:

@@ -3,6 +3,59 @@ import re
 from django.conf import settings
 from rest_framework.views import APIView
 from django.http import StreamingHttpResponse, HttpResponse, FileResponse, Http404
+from django.db import IntegrityError
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import UploadVideoSerializer
+from django.core.files.storage import default_storage
+from .tasks import process_video
+from .models import Video
+from django.db import transaction
+
+
+class UploadVideo(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = UploadVideoSerializer(data=request.data)
+        if serializer.is_valid():
+            data = serializer.validated_data
+
+            title = data.get('title')
+            description = data.get('description')
+            video_file = data.get('video')
+            thumbnail = data.get('thumbnail')
+
+            try:
+                # Opening the database transaction ---------------------------------------------------------------------
+                with transaction.atomic():
+
+                    # Save the video metadata
+                    video = Video.objects.create(
+                        user=request.user,
+                        title=title,
+                        description=description,
+                        thumbnail=thumbnail,
+                    )
+
+                    # Save the video temporarily to process it latter
+                    # Note that video will be deleted after processing
+                    video_path = default_storage.save(
+                        f'stream_video/videos/{str(video.uuid)}/{video_file.name}', video_file
+                    )
+
+                    # Call the Celery task to process the video
+                    process_video.delay(video_uuid=str(video.uuid), video_path=video_path)
+
+                    return Response({"message": "Video uploaded successfully. Processing in background."},
+                                    status=status.HTTP_201_CREATED)
+
+            except IntegrityError as err:
+                print(err)
+                return Response({"message": "Failed to upload the video"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class StreamVideo(APIView):

@@ -174,6 +174,11 @@ USE_I18N = True
 
 USE_TZ = True
 
+# To store user uploaded files into media folder
+# Note: files will be stored temporarily
+MEDIA_URL = '/media/'
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
@@ -211,7 +216,7 @@ RABBITMQ = {
     "PASSWORD": os.environ.get("RABBITMQ_PASSWORD", "guest"),
 }
 
-BROKER_URL = f"{RABBITMQ['PROTOCOL']}://{RABBITMQ['USER']}:{RABBITMQ['PASSWORD']}@{RABBITMQ['HOST']}:{RABBITMQ['PORT']}"
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
 
 # Celery configurations
 CELERY_ACCEPT_CONTENT = ['application/json']
