@@ -41,9 +41,9 @@ class UploadVideo(APIView):
 
                     # Save the video temporarily to process it latter
                     # Note that video will be deleted after processing
-                    video_path = default_storage.save(
-                        f'stream_video/videos/{str(video.uuid)}/{video_file.name}', video_file
-                    )
+                    video_path = os.path.join(settings.MEDIA_ROOT,
+                                              'stream_video', 'videos', f"{str(video.uuid)}", f"{video_file.name}")
+                    default_storage.save(video_path, video_file)
 
                     # Call the Celery task to process the video
                     process_video.delay(video_uuid=str(video.uuid), video_path=video_path)

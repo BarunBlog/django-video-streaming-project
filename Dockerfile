@@ -4,8 +4,7 @@ FROM python:3.10-alpine
 RUN apk update && apk add --no-cache \
     ffmpeg \
     make \
-    build-base \
-    linux-headers
+    build-base
 
 EXPOSE 8000
 WORKDIR /app
@@ -15,9 +14,6 @@ COPY requirements.txt .
 RUN pip3 install -r requirements.txt
 
 COPY . .
-
-# create unprivileged user
-RUN adduser --disabled-password --gecos '' myuser
 
 COPY run_web.sh /run_web.sh
 COPY run_celery.sh /run_celery.sh

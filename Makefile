@@ -7,6 +7,9 @@ docker-down:
 docker-start: |
 	docker-down docker-build
 
+docker-clean:
+	docker system prune -f # Remove unused cache, data, images
+
 runserver: |
 	python manage.py runserver 0.0.0.0:8000
 

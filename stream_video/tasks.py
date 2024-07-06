@@ -18,10 +18,11 @@ def process_video(video_uuid, video_path):
     logger.info("Start creating the folder for chunk files for the video")
 
     # Path to store the video segments and mpd file
-    mpd_path = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'segments', str(video_uuid), 'manifest.mpd')
+    segments_path = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'chunks', str(video_uuid), 'segments')
+    mpd_path = os.path.join(segments_path, 'manifest.mpd')
 
     # Create folder to store segments
-    os.makedirs(mpd_path, exist_ok=True)
+    os.makedirs(segments_path, exist_ok=True)
 
     logger.info("Start generating the chunk files for the video")
 
@@ -41,7 +42,7 @@ def process_video(video_uuid, video_path):
         )
     except ffmpeg.Error as e:
         logger.error(e)
-        print('Error occurred: ', e.stderr.decode(), flush=True)
+        print('Error occurred: ', e, flush=True)
 
     logger.info("Successfully generated the video segment files")
 
