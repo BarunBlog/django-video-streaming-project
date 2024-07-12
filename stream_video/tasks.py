@@ -5,6 +5,7 @@ from django_celery_results.models import TaskResult
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from .models import Video
+import shutil
 
 logger = get_task_logger(__name__)
 
@@ -37,7 +38,7 @@ def process_video(video_uuid, video_path):
                     video_bitrate='2400k',
                     video_size='1920x1080',
                     vcodec='libx264',
-                    acodec='aac')
+                    acodec='copy')
             .run()
         )
     except ffmpeg.Error as e:
@@ -52,6 +53,12 @@ def process_video(video_uuid, video_path):
 
     # Clean up the temporary video file
     os.remove(video_path)
+    logger.info("Deleted the video file permanently")
+
+    # Remove the parent directory of the video file
+    parent_directory = os.path.dirname(video_path)
+    shutil.rmtree(parent_directory, ignore_errors=True)
+    logger.info("Deleted the video parent directory")
 
     return "Task Successful"
 

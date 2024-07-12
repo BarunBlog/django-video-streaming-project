@@ -111,7 +111,7 @@ class StreamVideo(APIView):
 
 class ServeMPDFile(APIView):
     def get(self, request, *args, **kwargs):
-        mpd_file_path = os.path.join(settings.STATIC_ROOT, 'stream_video', 'segments', 'nature_video.mpd')
+        mpd_file_path = os.path.join(settings.STATIC_ROOT, 'stream_video', 'segments', 'manifest.mpd')
         print(mpd_file_path, flush=True)
         if os.path.exists(mpd_file_path):
             return FileResponse(open(mpd_file_path, 'rb'), content_type='application/dash+xml')
