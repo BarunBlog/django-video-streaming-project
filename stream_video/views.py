@@ -61,7 +61,6 @@ class UploadVideo(APIView):
 
 
 class GetVideos(generics.ListAPIView):
-    page_size = 2
     queryset = Video.objects.all()
     serializer_class = GetVideosSerializer
 
