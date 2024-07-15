@@ -13,7 +13,7 @@ from .tasks import process_video
 from .models import Video
 from django.db import transaction
 from rest_framework import generics
-from .serializers import GetVideosSerializer
+from .serializers import GetVideosSerializer, GetVideoDetailSerializer
 
 
 class UploadVideo(APIView):
@@ -63,6 +63,12 @@ class UploadVideo(APIView):
 class GetVideos(generics.ListAPIView):
     queryset = Video.objects.all()
     serializer_class = GetVideosSerializer
+
+
+class GetVideoDetail(generics.RetrieveAPIView):
+    queryset = Video.objects.all()
+    serializer_class = GetVideoDetailSerializer
+    lookup_field = 'uuid'
 
 
 class ServeMPDFile(APIView):

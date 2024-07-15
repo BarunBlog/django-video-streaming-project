@@ -5,7 +5,7 @@ import uuid
 
 class Video(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    author = models.ForeignKey(User, on_delete=models.CASCADE)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     thumbnail = models.ImageField(upload_to="stream_video/images/")

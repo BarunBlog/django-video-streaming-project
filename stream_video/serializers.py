@@ -15,4 +15,16 @@ class UploadVideoSerializer(serializers.ModelSerializer):
 class GetVideosSerializer(serializers.ModelSerializer):
     class Meta:
         model = Video
-        fields = ('uuid', 'user', 'title', 'thumbnail', 'created_at')
+        fields = ('uuid', 'author', 'title', 'thumbnail', 'created_at')
+
+
+class GetVideoDetailSerializer(serializers.ModelSerializer):
+
+    author_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Video
+        fields = ('uuid', 'author_name', 'title', 'description', 'created_at', 'mpd_file_url')
+
+    def get_author_name(self, obj):
+        return obj.author.username
