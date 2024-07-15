@@ -10,3 +10,9 @@ class UploadVideoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Video
         fields = ('title', 'description', 'video', 'thumbnail')
+
+
+class GetVideosSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Video
+        fields = ('uuid', 'user', 'title', 'thumbnail', 'created_at')

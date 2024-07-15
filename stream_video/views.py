@@ -12,6 +12,8 @@ from django.core.files.storage import default_storage
 from .tasks import process_video
 from .models import Video
 from django.db import transaction
+from rest_framework import generics
+from .serializers import GetVideosSerializer
 
 
 class UploadVideo(APIView):
@@ -56,6 +58,12 @@ class UploadVideo(APIView):
                 return Response({"message": "Failed to upload the video"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetVideos(generics.ListAPIView):
+    page_size = 2
+    queryset = Video.objects.all()
+    serializer_class = GetVideosSerializer
 
 
 class StreamVideo(APIView):
