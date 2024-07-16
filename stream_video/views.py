@@ -91,10 +91,11 @@ class ServeMPDFile(APIView):
 
 
 class ServeSegmentFile(APIView):
-    def get(self, request, segment_name, *args, **kwargs):
-        segment_file_path = os.path.join(settings.STATIC_ROOT, 'stream_video', 'segments', segment_name)
+    def get(self, request, video_uuid, segment_name, *args, **kwargs):
+        segment_file_path = os.path.join(
+            settings.MEDIA_ROOT, 'stream_video', 'chunks', str(video_uuid), 'segments', segment_name)
         if os.path.exists(segment_file_path):
             return FileResponse(open(segment_file_path, 'rb'), content_type='video/mp4')
         else:
-            raise Http404('Segment file not found')
+            return Response({"message": "Video segment file not found"}, status=status.HTTP_404_NOT_FOUND)
 
