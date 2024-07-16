@@ -4,7 +4,6 @@ from .validators import validate_video_file_extension
 
 
 class UploadVideoSerializer(serializers.ModelSerializer):
-
     video = serializers.FileField(validators=[validate_video_file_extension])
 
     class Meta:
@@ -13,13 +12,17 @@ class UploadVideoSerializer(serializers.ModelSerializer):
 
 
 class GetVideosSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+
     class Meta:
         model = Video
-        fields = ('uuid', 'author', 'title', 'thumbnail', 'created_at')
+        fields = ('uuid', 'author_name', 'title', 'thumbnail', 'created_at')
+
+    def get_author_name(self, obj):
+        return obj.author.username
 
 
 class GetVideoDetailSerializer(serializers.ModelSerializer):
-
     author_name = serializers.SerializerMethodField()
 
     class Meta:
