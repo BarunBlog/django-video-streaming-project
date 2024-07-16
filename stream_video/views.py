@@ -14,6 +14,7 @@ from .models import Video
 from django.db import transaction
 from rest_framework import generics
 from .serializers import GetVideosSerializer, GetVideoDetailSerializer
+from django.core.exceptions import ObjectDoesNotExist
 
 
 class UploadVideo(APIView):
@@ -72,13 +73,21 @@ class GetVideoDetail(generics.RetrieveAPIView):
 
 
 class ServeMPDFile(APIView):
-    def get(self, request, *args, **kwargs):
-        mpd_file_path = os.path.join(settings.STATIC_ROOT, 'stream_video', 'segments', 'manifest.mpd')
-        print(mpd_file_path, flush=True)
-        if os.path.exists(mpd_file_path):
-            return FileResponse(open(mpd_file_path, 'rb'), content_type='application/dash+xml')
+    def get(self, request, video_uuid, *args, **kwargs):
+
+        # Get video object by uuid
+        try:
+            video: Video = Video.objects.get(uuid=video_uuid)
+        except ObjectDoesNotExist:
+            return Response({"message": "Video not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not video.mpd_file_url:
+            return Response({"message": "Video mpd file url not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if os.path.exists(video.mpd_file_url):
+            return FileResponse(open(video.mpd_file_url, 'rb'), content_type='application/dash+xml')
         else:
-            raise Http404('MPD file not found')
+            return Response({"message": "Video mpd file not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ServeSegmentFile(APIView):
