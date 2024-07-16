@@ -23,5 +23,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
 
     path('api/user/', include('user.urls')),
-    path('api/stream/', include('stream_video.urls')),
+    path('api/stream-video/', include('stream_video.urls')),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -35,8 +35,8 @@ class UploadVideo(APIView):
                 with transaction.atomic():
 
                     # Save the video metadata
-                    video = Video.objects.create(
-                        user=request.user,
+                    video: Video = Video.objects.create(
+                        author=request.user,
                         title=title,
                         description=description,
                         thumbnail=thumbnail,
