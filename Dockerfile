@@ -3,8 +3,7 @@ FROM python:3.10-alpine
 # Install FFmpeg and other necessary packages
 RUN apk update && apk add --no-cache \
     ffmpeg \
-    make \
-    build-base
+    make
 
 EXPOSE 8000
 WORKDIR /app

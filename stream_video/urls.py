@@ -6,6 +6,6 @@ urlpatterns = [
     path('get-videos/', GetVideos.as_view(), name='get-videos'),
     path('get-videos/<uuid:uuid>/', GetVideoDetail.as_view(), name='get-video-detail'),
     path('stream/<uuid:video_uuid>/', ServeMPDFile.as_view(), name='serve_mpd_file'),
-    path('stream/<uuid:video_uuid>/segments/<str:segment_name>/', ServeSegmentFile.as_view(),
+    path('stream/<uuid:video_uuid>/<str:segment_name>/', ServeSegmentFile.as_view(),
          name='serve_segment_file'),
 ]

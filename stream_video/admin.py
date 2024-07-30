@@ -4,7 +4,7 @@ from .models import Video, VideoSegment
 
 @admin.register(Video)
 class VideoAdmin(admin.ModelAdmin):
-    list_display = ('uuid', 'title', 'author', 'created_at', 'updated_at')
+    list_display = ('uuid', 'title', 'author', 'category', 'created_at', 'updated_at')
     search_fields = ('title', 'user__username')
 
 

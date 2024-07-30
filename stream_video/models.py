@@ -2,10 +2,22 @@ from django.db import models
 from django.contrib.auth.models import User
 import uuid
 
+CATEGORY_CHOICES = [
+    ('Education', 'Education'),
+    ('Entertainment', 'Entertainment'),
+    ('Music', 'Music'),
+    ('News', 'News'),
+    ('Sports', 'Sports'),
+    ('Technology', 'Technology'),
+    ('Gaming', 'Gaming'),
+    ('Other', 'Other'),
+]
+
 
 class Video(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     author = models.ForeignKey(User, on_delete=models.CASCADE)
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='Other')
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     thumbnail = models.ImageField(upload_to="stream_video/images/")
