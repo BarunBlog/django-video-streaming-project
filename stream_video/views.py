@@ -11,10 +11,12 @@ from .serializers import UploadVideoSerializer
 from django.core.files.storage import default_storage
 from .tasks import process_video
 from .models import Video
+from .filters import VideoFilter
 from django.db import transaction
 from rest_framework import generics
 from .serializers import GetVideosSerializer, GetVideoDetailSerializer
 from django.core.exceptions import ObjectDoesNotExist
+from django_filters import rest_framework as filters
 
 
 class UploadVideo(APIView):
@@ -66,6 +68,8 @@ class UploadVideo(APIView):
 class GetVideos(generics.ListAPIView):
     queryset = Video.objects.all()
     serializer_class = GetVideosSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = VideoFilter
 
 
 class GetVideoDetail(generics.RetrieveAPIView):
