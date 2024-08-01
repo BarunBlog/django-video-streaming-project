@@ -27,6 +27,7 @@ class UploadVideo(APIView):
 
             title = data.get('title')
             description = data.get('description')
+            category = data.get('category')
             video_file = data.get('video')
             thumbnail = data.get('thumbnail')
 
@@ -39,6 +40,7 @@ class UploadVideo(APIView):
                         author=request.user,
                         title=title,
                         description=description,
+                        category=category,
                         thumbnail=thumbnail,
                     )
 
@@ -98,4 +100,3 @@ class ServeSegmentFile(APIView):
             return FileResponse(open(segment_file_path, 'rb'), content_type='video/mp4')
         else:
             return Response({"message": "Video segment file not found"}, status=status.HTTP_404_NOT_FOUND)
-

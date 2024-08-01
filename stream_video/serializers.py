@@ -8,7 +8,7 @@ class UploadVideoSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Video
-        fields = ('title', 'description', 'video', 'thumbnail')
+        fields = ('title', 'description', 'category', 'video', 'thumbnail')
 
 
 class GetVideosSerializer(serializers.ModelSerializer):
