@@ -16,7 +16,7 @@ class GetVideosSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Video
-        fields = ('uuid', 'author_name', 'title', 'thumbnail', 'created_at')
+        fields = ('uuid', 'author_name', 'title', 'category', 'thumbnail', 'created_at')
 
     def get_author_name(self, obj):
         return obj.author.username
@@ -27,7 +27,7 @@ class GetVideoDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Video
-        fields = ('uuid', 'author_name', 'title', 'description', 'created_at', 'mpd_file_url')
+        fields = ('uuid', 'author_name', 'title', 'category', 'description', 'created_at', 'mpd_file_url')
 
     def get_author_name(self, obj):
         return obj.author.username

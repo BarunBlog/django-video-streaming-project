@@ -23,7 +23,7 @@ class Video(models.Model):
     thumbnail = models.ImageField(upload_to="stream_video/images/")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    mpd_file_url = models.URLField(max_length=255, null=True, blank=True)
+    mpd_file_url = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return self.title

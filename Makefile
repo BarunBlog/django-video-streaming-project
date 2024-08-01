@@ -7,6 +7,10 @@ docker-down:
 docker-start: |
 	docker-down docker-build
 
+compose-up: |
+	docker compose up --build --remove-orphans
+	docker image prune --force
+
 docker-clean:
 	docker system prune -f # Remove unused cache, data, images
 
