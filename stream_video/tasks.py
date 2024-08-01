@@ -48,7 +48,8 @@ def process_video(video_uuid, video_path):
     logger.info("Successfully generated the video segment files")
 
     # Update the video object with the mpd file URL
-    video.mpd_file_url = mpd_path
+    video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
+                                      'manifest.mpd')
     video.save()
 
     # Clean up the temporary video file
@@ -61,6 +62,3 @@ def process_video(video_uuid, video_path):
     logger.info("Deleted the video parent directory")
 
     return "Task Successful"
-
-
-
