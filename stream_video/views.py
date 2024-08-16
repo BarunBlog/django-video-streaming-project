@@ -3,74 +3,110 @@ import re
 from django.conf import settings
 from rest_framework.views import APIView
 from django.http import StreamingHttpResponse, HttpResponse, FileResponse, Http404
+from django.db import IntegrityError
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework import status
+from .serializers import UploadVideoSerializer
+from django.core.files.storage import default_storage
+from .tasks import process_video
+from .models import Video
+from .filters import VideoFilter
+from django.db import transaction
+from rest_framework import generics
+from .serializers import GetVideosSerializer, GetVideoDetailSerializer
+from django.core.exceptions import ObjectDoesNotExist
+from django_filters import rest_framework as filters
 
 
-class StreamVideo(APIView):
-    
-    def get(self, request):
-        video_path = 'stream_video/videos/nature_video.mp4'
-        file_path = os.path.join(settings.STATIC_ROOT, video_path)
+class UploadVideo(APIView):
+    permission_classes = [IsAuthenticated]
 
-        if not os.path.exists(file_path):
-            return HttpResponse('File not found', status=404)
-        
-        file_size = os.path.getsize(file_path)
-        range_header = request.headers.get('Range')
-        content_type = 'video/mp4'
+    def post(self, request):
+        serializer = UploadVideoSerializer(data=request.data)
+        if serializer.is_valid():
+            data = serializer.validated_data
 
-        if range_header:
-            start_byte, end_byte = 0, None
+            title = data.get('title')
+            description = data.get('description')
+            category = data.get('category')
+            video_file = data.get('video')
+            thumbnail = data.get('thumbnail')
 
-            # Check if the range_header is in the format
-            # bytes=100-200
-            has_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+            try:
+                # Opening the database transaction ---------------------------------------------------------------------
+                with transaction.atomic():
 
-            if has_match:
-                start_byte, end_byte = has_match.groups()
-            
-            start_byte = int(start_byte)
+                    # Save the video metadata
+                    video: Video = Video.objects.create(
+                        author=request.user,
+                        title=title,
+                        description=description,
+                        category=category,
+                        thumbnail=thumbnail,
+                    )
 
-            if end_byte:
-                end_byte = int(end_byte)
-            else:
-                end_byte = file_size - 1
+                    # Save the video temporarily to process it latter
+                    # Note that video will be deleted after processing
+                    video_path = os.path.join(settings.MEDIA_ROOT,
+                                              'stream_video', 'videos', f"{str(video.uuid)}", f"{video_file.name}")
+                    default_storage.save(video_path, video_file)
 
-            print(f"start_byte: {start_byte}, end_byte: {end_byte}", flush=True)
+                    # Call the Celery task to process the video
+                    process_video.delay(video_uuid=str(video.uuid), video_path=video_path)
 
-            # Get the inclusive length of the byte range
-            length = end_byte - start_byte + 1
+                    return Response({"message": "Video uploaded successfully. Processing in background."},
+                                    status=status.HTTP_201_CREATED)
 
-            # Open the file in binary read mode and return the stream
-            with open(file_path, 'rb') as file_stream:
-                file_stream.seek(start_byte)  # Move pointer to the start_byte position
-                data = file_stream.read(length)  # Reads length bytes from start_byte
-            
-            response = HttpResponse(data, status=206, content_type=content_type)
-            response['Content-Length'] = str(length)
-            response['Content-Range'] = f'bytes {start_byte}-{end_byte}/{file_size}'
-        else:
-            response = StreamingHttpResponse(open(file_path, 'rb'), content_type=content_type)
-            response['Content-Length'] = str(file_size)
+            except IntegrityError as err:
+                print(err)
+                return Response({"message": "Failed to upload the video"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        response['Accept-Ranges'] = 'bytes'
-        return response
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetVideos(generics.ListAPIView):
+    queryset = Video.objects.all()
+    serializer_class = GetVideosSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = VideoFilter
+
+
+class GetVideoDetail(generics.RetrieveAPIView):
+    queryset = Video.objects.all()
+    serializer_class = GetVideoDetailSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'uuid'
 
 
 class ServeMPDFile(APIView):
-    def get(self, request, *args, **kwargs):
-        mpd_file_path = os.path.join(settings.STATIC_ROOT, 'stream_video', 'segments', 'nature_video.mpd')
-        print(mpd_file_path, flush=True)
-        if os.path.exists(mpd_file_path):
-            return FileResponse(open(mpd_file_path, 'rb'), content_type='application/dash+xml')
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, video_uuid, *args, **kwargs):
+
+        # Get video object by uuid
+        try:
+            video: Video = Video.objects.get(uuid=video_uuid)
+        except ObjectDoesNotExist:
+            return Response({"message": "Video not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not video.mpd_file_url:
+            return Response({"message": "Video mpd file url not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if os.path.exists(video.mpd_file_url):
+            return FileResponse(open(video.mpd_file_url, 'rb'), content_type='application/dash+xml')
         else:
-            raise Http404('MPD file not found')
+            return Response({"message": "Video mpd file not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
 class ServeSegmentFile(APIView):
-    def get(self, request, segment_name, *args, **kwargs):
-        segment_file_path = os.path.join(settings.STATIC_ROOT, 'stream_video', 'segments', segment_name)
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, video_uuid, segment_name, *args, **kwargs):
+        segment_file_path = os.path.join(
+            settings.MEDIA_ROOT, 'stream_video', 'chunks', str(video_uuid), 'segments', segment_name)
         if os.path.exists(segment_file_path):
             return FileResponse(open(segment_file_path, 'rb'), content_type='video/mp4')
         else:
-            raise Http404('Segment file not found')
-
+            return Response({"message": "Video segment file not found"}, status=status.HTTP_404_NOT_FOUND)

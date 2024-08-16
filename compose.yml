@@ -1,15 +1,76 @@
 services:
+
+  # Database
+  dev-db:
+    image: postgres:latest
+    container_name: video-streaming-db
+    volumes:
+      - postgres-db:/data/postgres
+    restart: unless-stopped
+    ports:
+      - "5430:5432" # host port : internal service port
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    networks:
+      - app-network
+
+  # RabbitMQ
+  rabbit:
+    hostname: rabbit
+    image: rabbitmq:3.6.9-management
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+    ports:
+      - "5673:5672"
+      - "15672:15672"
+    networks:
+      - app-network
+
+  # Web server
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: video-streaming-backend
     restart: unless-stopped
+    command: sh ./run_web.sh
     volumes:
       - .:/app
+      - ./media:/app/media
     ports:
       - "8000:8000"
     environment:
       - DEBUG=${DEBUG}
       - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}
+    networks:
+      - app-network
+    depends_on:
+      - dev-db
+
+  # Celery worker
+  worker:
+      build:
+          context: .
+          dockerfile: Dockerfile
+      environment:
+        - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+        - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}
+      command: sh ./run_celery.sh
+      volumes:
+          - .:/app
+      depends_on:
+          - rabbit
+          - dev-db
+      networks:
+        - app-network
 
 networks:
-  default:
+  app-network:
+
+volumes:
+  postgres-db:
