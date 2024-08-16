@@ -68,6 +68,7 @@ class UploadVideo(APIView):
 class GetVideos(generics.ListAPIView):
     queryset = Video.objects.all()
     serializer_class = GetVideosSerializer
+    permission_classes = [IsAuthenticated]
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = VideoFilter
 
@@ -75,10 +76,13 @@ class GetVideos(generics.ListAPIView):
 class GetVideoDetail(generics.RetrieveAPIView):
     queryset = Video.objects.all()
     serializer_class = GetVideoDetailSerializer
+    permission_classes = [IsAuthenticated]
     lookup_field = 'uuid'
 
 
 class ServeMPDFile(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, video_uuid, *args, **kwargs):
 
         # Get video object by uuid
@@ -97,6 +101,8 @@ class ServeMPDFile(APIView):
 
 
 class ServeSegmentFile(APIView):
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, video_uuid, segment_name, *args, **kwargs):
         segment_file_path = os.path.join(
             settings.MEDIA_ROOT, 'stream_video', 'chunks', str(video_uuid), 'segments', segment_name)
