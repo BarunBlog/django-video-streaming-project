@@ -14,6 +14,9 @@ jobs:
     name: Deploy
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
       - name: Configure SSH
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
@@ -21,7 +24,7 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
           mkdir -p ~/.ssh/
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/github
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/github
           chmod 600 ~/.ssh/github
           cat >>~/.ssh/config <<END
           Host target
@@ -31,6 +34,15 @@ jobs:
             LogLevel ERROR
             StrictHostKeyChecking no
           END
+
+      - name: Test SSH Connection
+        run: |
+          ssh -T target echo "SSH connection established"
+
+      - name: Clone Repository (if needed)
+        run: |
+          ssh target "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project; fi"
+
       - name: Run deploy
         run: |
           ssh target "cd django-video-streaming-project/ && docker-compose down && git pull && docker-compose build && docker-compose up -d --force-recreate"
