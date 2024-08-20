@@ -9,7 +9,6 @@ concurrency:
   group: master
   cancel-in-progress: true
 
-
 jobs:
   deploy:
     name: Deploy
@@ -35,5 +34,3 @@ jobs:
       - name: Run deploy
         run: |
           ssh target "cd django-video-streaming-project/ && docker-compose down && git pull && docker-compose build && docker-compose up -d --force-recreate"
-          
-
