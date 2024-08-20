@@ -57,7 +57,7 @@ def process_video(video_uuid, video_path):
         for root, dirs, files in os.walk(segments_path):
             for file in files:
                 local_file_path = os.path.join(root, file)
-                s3_key = os.path.join('stream_video', 'chunks', str(video_uuid), 'segments', file)
+                s3_key = os.path.join('media', 'stream_video', 'chunks', str(video_uuid), 'segments', file)
                 s3_client.upload_file(local_file_path, bucket_name, s3_key)
                 logger.info(f"Uploaded {file} to S3")
 
@@ -71,22 +71,18 @@ def process_video(video_uuid, video_path):
         shutil.rmtree(segments_parent_directory, ignore_errors=True)
         logger.info("Deleted local segment files and parent directory")
 
-        # Delete the original video from S3
-        s3_client.delete_object(Bucket=bucket_name, Key=video_path)
-        logger.info("Deleted the original video from S3")
-
     else:
         # Update the video object with the mpd file URL
         video.mpd_file_url = mpd_path
         video.save()
 
-        # Clean up the temporary video file
-        os.remove(video_path)
-        logger.info("Deleted the video file permanently")
+    # Clean up the temporary video file
+    os.remove(video_path)
+    logger.info("Deleted the video file permanently")
 
-        # Remove the parent directory of the video file
-        parent_directory = os.path.dirname(video_path)
-        shutil.rmtree(parent_directory, ignore_errors=True)
-        logger.info("Deleted the video parent directory")
+    # Remove the parent directory of the video file
+    parent_directory = os.path.dirname(video_path)
+    shutil.rmtree(parent_directory, ignore_errors=True)
+    logger.info("Deleted the video parent directory")
 
     return "Task Successful"

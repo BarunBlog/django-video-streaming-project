@@ -46,11 +46,17 @@ class UploadVideo(APIView):
                         thumbnail=thumbnail,
                     )
 
-                    # Save the video temporarily to process it latter
-                    # Note that video will be deleted after processing
-                    video_path = os.path.join(settings.MEDIA_ROOT,
-                                              'stream_video', 'videos', f"{str(video.uuid)}", f"{video_file.name}")
-                    default_storage.save(video_path, video_file)
+                    # Create the directory for saving the video if it doesn't exist
+                    video_directory = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'videos', str(video.uuid))
+                    os.makedirs(video_directory, exist_ok=True)
+
+                    # Define the full path for the video file
+                    video_path = os.path.join(video_directory, video_file.name)
+
+                    # Save the file to the defined path
+                    with open(video_path, 'wb+') as destination:
+                        for chunk in video_file.chunks():
+                            destination.write(chunk)
 
                     # Call the Celery task to process the video
                     process_video.delay(video_uuid=str(video.uuid), video_path=video_path)

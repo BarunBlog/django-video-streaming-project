@@ -219,6 +219,8 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_CACHE_BACKEND = 'django-cache'
 
+print(f"The environment is {ENVIRONMENT}", flush=True)
+
 if ENVIRONMENT == "production":
     # S3 bucket configuration
     AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
@@ -228,15 +230,13 @@ if ENVIRONMENT == "production":
     AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 
     # S3 bucket Optional settings
-    AWS_S3_URL_PROTOCOL = 'https'
     AWS_S3_FILE_OVERWRITE = False
     AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
-    AWS_S3_BASE_URL = f'{AWS_S3_URL_PROTOCOL}://{AWS_S3_CUSTOM_DOMAIN}'
 
     # S3 static settings
     STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
-    STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    STATICFILES_STORAGE = 'video_streaming_backend.storages.StaticStorage'
 
     # Media files settings
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    MEDIA_URL = f'{AWS_S3_BASE_URL}/media/'
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+    DEFAULT_FILE_STORAGE = 'video_streaming_backend.storages.MediaStorage'
