@@ -41,28 +41,38 @@ jobs:
 
       - name: Clone Repository (if needed)
         run: |
-          ssh target "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project; fi"
+          ssh target "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
 
-      - name: Set up environment variables
+      - name: Set up environment variables on EC2
         run: |
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
-          echo "AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}" >> .env
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
-          echo "AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}" >> .env
-          echo "ENVIRONMENT=${{ secrets.ENVIRONMENT }}" >> .env
-          echo "DEBUG=${{ secrets.DEBUG }}" >> .env
-          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
-          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
-          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
-          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
-          echo "RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}" >> .env
-          echo "RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}" >> .env
-          echo "RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}" >> .env
-          echo "RABBITMQ_PORT=${{ secrets.RABBITMQ_PORT }}" >> .env
-
+          ssh target <<'ENDSSH'
+            cd django-video-streaming-project/
+            cat <<EOF > .env
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}
+            ENVIRONMENT=${{ secrets.ENVIRONMENT }}
+            DEBUG=${{ secrets.DEBUG }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            RABBITMQ_USER=${{ secrets.RABBITMQ_USER }}
+            RABBITMQ_PASSWORD=${{ secrets.RABBITMQ_PASSWORD }}
+            RABBITMQ_HOST=${{ secrets.RABBITMQ_HOST }}
+            RABBITMQ_PORT=${{ secrets.RABBITMQ_PORT }}
+            EOF
+          ENDSSH
 
       - name: Run deploy
         run: |
-          ssh target "cd django-video-streaming-project/ && docker-compose down && git pull && docker-compose build && docker-compose up -d --force-recreate"
+          ssh target <<'ENDSSH'
+            cd django-video-streaming-project/
+            docker-compose down
+            git pull
+            docker-compose build --no-cache
+            docker-compose up -d --force-recreate
+          ENDSSH
