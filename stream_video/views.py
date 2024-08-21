@@ -1,5 +1,6 @@
 import os
 import re
+import requests
 from django.conf import settings
 from rest_framework.views import APIView
 from django.http import StreamingHttpResponse, HttpResponse, FileResponse, Http404
@@ -100,19 +101,49 @@ class ServeMPDFile(APIView):
         if not video.mpd_file_url:
             return Response({"message": "Video mpd file url not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if os.path.exists(video.mpd_file_url):
-            return FileResponse(open(video.mpd_file_url, 'rb'), content_type='application/dash+xml')
-        else:
-            return Response({"message": "Video mpd file not found"}, status=status.HTTP_404_NOT_FOUND)
+        environment = settings.ENVIRONMENT
+
+        try:
+            mpd_file_url = video.mpd_file_url
+
+            if environment == "development":
+                mpd_file_url = request.build_absolute_uri('/')[:-1].strip("/") + mpd_file_url
+
+            response = requests.get(mpd_file_url, stream=True)
+
+            if response.status_code == 200:
+                return HttpResponse(response.content, content_type='application/dash+xml')
+            else:
+                return Response({"message": "Failed to retrieve the MPD file"}, status=status.HTTP_404_NOT_FOUND)
+        except requests.RequestException as e:
+            return Response({"message": f"Error retrieving video MPD file: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ServeSegmentFile(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, video_uuid, segment_name, *args, **kwargs):
-        segment_file_path = os.path.join(
-            settings.MEDIA_ROOT, 'stream_video', 'chunks', str(video_uuid), 'segments', segment_name)
-        if os.path.exists(segment_file_path):
-            return FileResponse(open(segment_file_path, 'rb'), content_type='video/mp4')
-        else:
-            return Response({"message": "Video segment file not found"}, status=status.HTTP_404_NOT_FOUND)
+        environment = settings.ENVIRONMENT
+
+        try:
+            domain = request.build_absolute_uri('/')[:-1].strip("/")
+
+            if environment == "production":
+                segment_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid),
+                                                'segments',
+                                                segment_name)
+            else:
+                segment_file_url = os.path.join(domain, 'media', 'stream_video', 'chunks', str(video_uuid), 'segments',
+                                                segment_name)
+
+            response = requests.get(segment_file_url, stream=True)
+
+            if response.status_code == 200:
+                return HttpResponse(response.content, content_type='application/dash+xml')
+            else:
+                return Response({"message": "Failed to retrieve the MPD file"}, status=status.HTTP_404_NOT_FOUND)
+
+        except requests.RequestException as e:
+            return Response({"message": f"Error retrieving video MPD file: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)

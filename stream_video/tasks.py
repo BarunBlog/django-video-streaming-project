@@ -73,7 +73,8 @@ def process_video(video_uuid, video_path):
 
     else:
         # Update the video object with the mpd file URL
-        video.mpd_file_url = mpd_path
+        video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
+                                          'manifest.mpd')
         video.save()
 
     # Clean up the temporary video file
