@@ -62,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_ratelimit.middleware.RatelimitMiddleware',
 ]
 
 # Rest framework configuration
@@ -218,6 +219,9 @@ CELERY_TASK_SERIALIZER = 'json'
 # to use the database
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_CACHE_BACKEND = 'django-cache'
+
+# Rate limit view
+RATELIMIT_VIEW = 'rate_limit.views.ratelimit_view'
 
 print(f"The environment is {ENVIRONMENT}", flush=True)
 

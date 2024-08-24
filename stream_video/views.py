@@ -18,8 +18,14 @@ from rest_framework import generics
 from .serializers import GetVideosSerializer, GetVideoDetailSerializer
 from django.core.exceptions import ObjectDoesNotExist
 from django_filters import rest_framework as filters
+from django_ratelimit.decorators import ratelimit
+from django.utils.decorators import method_decorator
 
 
+# Key is used as the user as the api is authenticated must
+# Rate is 2 requests per 1 minutes
+# If the limit is exceeded, the user will be blocked
+@method_decorator(ratelimit(key='user', rate='2/m', block=True), name='dispatch')
 class UploadVideo(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -87,6 +93,10 @@ class GetVideoDetail(generics.RetrieveAPIView):
     lookup_field = 'uuid'
 
 
+# Key is used as the user as the api is authenticated must
+# Rate is 10 requests per 1 minutes
+# If the limit is exceeded, the user will be blocked
+@method_decorator(ratelimit(key='user', rate='10/m', block=True), name='dispatch')
 class ServeMPDFile(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -120,6 +130,10 @@ class ServeMPDFile(APIView):
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# Key is used as the user as the api is authenticated must
+# Rate is 600 requests per 10 minutes
+# If the limit is exceeded, the user will be blocked
+@method_decorator(ratelimit(key='user', rate='600/10m', block=True), name='dispatch')
 class ServeSegmentFile(APIView):
     permission_classes = [IsAuthenticated]
 
