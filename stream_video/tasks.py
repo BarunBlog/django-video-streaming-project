@@ -41,6 +41,7 @@ def process_video(video_uuid, video_path):
                     video_bitrate='2400k',
                     video_size='1920x1080',
                     vcodec='libx264',
+                    seg_duration='4',  # Sets segment duration to 4 seconds
                     acodec='copy')
             .run()
         )
