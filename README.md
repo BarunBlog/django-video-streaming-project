@@ -44,7 +44,7 @@ Create a .env file in the root directory and provide the required values for env
 credentials.
 
 Note that if you want to run this locally then please change the variable to `ENVIRONMENT=development`. In that case you
-don't need to configure the S3 bucket
+don't need to configure the S3 bucket.
 
 # Build Docker containers:
 
@@ -54,12 +54,21 @@ To run this project you just need to run the following command and the rest will
 
 This command will build and start the Docker containers required for the project.
 
+# Collect Static files:
+
+If you are in the `production` environment then you need to run the collect static command to work with django admin
+panel.
+
+`python manage.py collectstatic`
+
+You need to run this command from the docker container `video-streaming-backend`
+
 # Admin Interface:
 
 The admin panel can be accessed at http://localhost:8000/admin/
 But you need to create a superuser account first.
 
-# Create Super User
+# Create Super User Account
 
 To visit the admin interface you need to create a superuser account from the docker cli
 ``` docker exec -it video-streaming-backend python manage.py createsuperuser ```
