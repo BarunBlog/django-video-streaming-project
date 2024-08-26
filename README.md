@@ -71,4 +71,5 @@ But you need to create a superuser account first.
 # Create Super User Account
 
 To visit the admin interface you need to create a superuser account from the docker cli
+
 ``` docker exec -it video-streaming-backend python manage.py createsuperuser ```
