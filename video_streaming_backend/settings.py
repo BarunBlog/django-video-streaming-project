@@ -27,6 +27,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', default="unsafe-secret")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', default=0)
 
+ENVIRONMENT = os.environ.get("ENVIRONMENT")
+
 ALLOWED_HOSTS = ['*']
 
 # Application definition
@@ -44,6 +46,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
     'django_celery_results',
+    'storages',
 
     # local apps
     'stream_video',
@@ -59,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_ratelimit.middleware.RatelimitMiddleware',
 ]
 
 # Rest framework configuration
@@ -171,17 +175,10 @@ USE_I18N = True
 USE_TZ = True
 
 # To store user uploaded files into media folder
-# Note: files will be stored temporarily
 MEDIA_URL = '/media/'
-
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
 STATIC_URL = 'static/'
-
-# location of static files for production
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
@@ -222,3 +219,28 @@ CELERY_TASK_SERIALIZER = 'json'
 # to use the database
 CELERY_RESULT_BACKEND = "django-db"
 CELERY_CACHE_BACKEND = 'django-cache'
+
+# Rate limit view
+RATELIMIT_VIEW = 'rate_limit.views.ratelimit_view'
+
+print(f"The environment is {ENVIRONMENT}", flush=True)
+
+if ENVIRONMENT == "production":
+    # S3 bucket configuration
+    AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+
+    # S3 bucket Optional settings
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+
+    # S3 static settings
+    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+    STATICFILES_STORAGE = 'video_streaming_backend.storages.StaticStorage'
+
+    # Media files settings
+    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+    DEFAULT_FILE_STORAGE = 'video_streaming_backend.storages.MediaStorage'

@@ -1,5 +1,6 @@
 import os
 import re
+import requests
 from django.conf import settings
 from rest_framework.views import APIView
 from django.http import StreamingHttpResponse, HttpResponse, FileResponse, Http404
@@ -17,8 +18,14 @@ from rest_framework import generics
 from .serializers import GetVideosSerializer, GetVideoDetailSerializer
 from django.core.exceptions import ObjectDoesNotExist
 from django_filters import rest_framework as filters
+from django_ratelimit.decorators import ratelimit
+from django.utils.decorators import method_decorator
 
 
+# Key is used as the user as the api is authenticated must
+# Rate is 2 requests per 1 minutes
+# If the limit is exceeded, the user will be blocked
+@method_decorator(ratelimit(key='user', rate='2/m', block=True), name='dispatch')
 class UploadVideo(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -46,11 +53,17 @@ class UploadVideo(APIView):
                         thumbnail=thumbnail,
                     )
 
-                    # Save the video temporarily to process it latter
-                    # Note that video will be deleted after processing
-                    video_path = os.path.join(settings.MEDIA_ROOT,
-                                              'stream_video', 'videos', f"{str(video.uuid)}", f"{video_file.name}")
-                    default_storage.save(video_path, video_file)
+                    # Create the directory for saving the video if it doesn't exist
+                    video_directory = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'videos', str(video.uuid))
+                    os.makedirs(video_directory, exist_ok=True)
+
+                    # Define the full path for the video file
+                    video_path = os.path.join(video_directory, video_file.name)
+
+                    # Save the file to the defined path
+                    with open(video_path, 'wb+') as destination:
+                        for chunk in video_file.chunks():
+                            destination.write(chunk)
 
                     # Call the Celery task to process the video
                     process_video.delay(video_uuid=str(video.uuid), video_path=video_path)
@@ -80,6 +93,10 @@ class GetVideoDetail(generics.RetrieveAPIView):
     lookup_field = 'uuid'
 
 
+# Key is used as the user as the api is authenticated must
+# Rate is 10 requests per 1 minutes
+# If the limit is exceeded, the user will be blocked
+@method_decorator(ratelimit(key='user', rate='10/m', block=True), name='dispatch')
 class ServeMPDFile(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -94,19 +111,53 @@ class ServeMPDFile(APIView):
         if not video.mpd_file_url:
             return Response({"message": "Video mpd file url not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        if os.path.exists(video.mpd_file_url):
-            return FileResponse(open(video.mpd_file_url, 'rb'), content_type='application/dash+xml')
-        else:
-            return Response({"message": "Video mpd file not found"}, status=status.HTTP_404_NOT_FOUND)
+        environment = settings.ENVIRONMENT
+
+        try:
+            mpd_file_url = video.mpd_file_url
+
+            if environment == "development":
+                mpd_file_url = request.build_absolute_uri('/')[:-1].strip("/") + mpd_file_url
+
+            response = requests.get(mpd_file_url, stream=True)
+
+            if response.status_code == 200:
+                return HttpResponse(response.content, content_type='application/dash+xml')
+            else:
+                return Response({"message": "Failed to retrieve the MPD file"}, status=status.HTTP_404_NOT_FOUND)
+        except requests.RequestException as e:
+            return Response({"message": f"Error retrieving video MPD file: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# Key is used as the user as the api is authenticated must
+# Rate is 600 requests per 10 minutes
+# If the limit is exceeded, the user will be blocked
+@method_decorator(ratelimit(key='user', rate='600/10m', block=True), name='dispatch')
 class ServeSegmentFile(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, video_uuid, segment_name, *args, **kwargs):
-        segment_file_path = os.path.join(
-            settings.MEDIA_ROOT, 'stream_video', 'chunks', str(video_uuid), 'segments', segment_name)
-        if os.path.exists(segment_file_path):
-            return FileResponse(open(segment_file_path, 'rb'), content_type='video/mp4')
-        else:
-            return Response({"message": "Video segment file not found"}, status=status.HTTP_404_NOT_FOUND)
+        environment = settings.ENVIRONMENT
+
+        try:
+            domain = request.build_absolute_uri('/')[:-1].strip("/")
+
+            if environment == "production":
+                segment_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid),
+                                                'segments',
+                                                segment_name)
+            else:
+                segment_file_url = os.path.join(domain, 'media', 'stream_video', 'chunks', str(video_uuid), 'segments',
+                                                segment_name)
+
+            response = requests.get(segment_file_url, stream=True)
+
+            if response.status_code == 200:
+                return HttpResponse(response.content, content_type='application/dash+xml')
+            else:
+                return Response({"message": "Failed to retrieve the MPD file"}, status=status.HTTP_404_NOT_FOUND)
+
+        except requests.RequestException as e:
+            return Response({"message": f"Error retrieving video MPD file: {str(e)}"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)

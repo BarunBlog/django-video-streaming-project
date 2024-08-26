@@ -1,11 +1,11 @@
 import os
 import ffmpeg
 from celery import shared_task
-from django_celery_results.models import TaskResult
 from celery.utils.log import get_task_logger
 from django.conf import settings
 from .models import Video
 import shutil
+import boto3
 
 logger = get_task_logger(__name__)
 
@@ -13,6 +13,9 @@ logger = get_task_logger(__name__)
 @shared_task
 def process_video(video_uuid, video_path):
     logger.info("Start getting the video object from uuid")
+
+    environment = settings.ENVIRONMENT
+    s3_client = boto3.client('s3')
 
     video = Video.objects.get(uuid=video_uuid)
 
@@ -38,6 +41,7 @@ def process_video(video_uuid, video_path):
                     video_bitrate='2400k',
                     video_size='1920x1080',
                     vcodec='libx264',
+                    seg_duration='4',  # Sets segment duration to 4 seconds
                     acodec='copy')
             .run()
         )
@@ -47,9 +51,32 @@ def process_video(video_uuid, video_path):
 
     logger.info("Successfully generated the video segment files")
 
-    # Update the video object with the mpd file URL
-    video.mpd_file_url = mpd_path
-    video.save()
+    if environment == "production":
+        bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+
+        # Upload the segments and mpd file to S3
+        for root, dirs, files in os.walk(segments_path):
+            for file in files:
+                local_file_path = os.path.join(root, file)
+                s3_key = os.path.join('media', 'stream_video', 'chunks', str(video_uuid), 'segments', file)
+                s3_client.upload_file(local_file_path, bucket_name, s3_key)
+                logger.info(f"Uploaded {file} to S3")
+
+        # Update the video object with the mpd file URL
+        video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
+                                          'manifest.mpd')
+        video.save()
+
+        # Clean up the local segment files
+        segments_parent_directory = os.path.dirname(segments_path)
+        shutil.rmtree(segments_parent_directory, ignore_errors=True)
+        logger.info("Deleted local segment files and parent directory")
+
+    else:
+        # Update the video object with the mpd file URL
+        video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
+                                          'manifest.mpd')
+        video.save()
 
     # Clean up the temporary video file
     os.remove(video_path)
