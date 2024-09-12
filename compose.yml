@@ -1,21 +1,5 @@
 services:
 
-  # Database
-  dev-db:
-    image: postgres:latest
-    container_name: video-streaming-db
-    volumes:
-      - postgres-db:/data/postgres
-    restart: unless-stopped
-    ports:
-      - "5430:5432" # host port : internal service port
-    environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-    networks:
-      - app-network
-
   # RabbitMQ
   rabbit:
     hostname: rabbit
@@ -34,14 +18,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: video-streaming-backend
     restart: unless-stopped
     command: sh ./run_web.sh
     volumes:
       - .:/app
       - ./media:/app/media
     ports:
-      - "8000:8000"
+      - "8000-8002:8000"
+    deploy:
+      replicas: 3
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
       - DEBUG=${DEBUG}
@@ -54,8 +39,6 @@ services:
       - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
     networks:
       - app-network
-    depends_on:
-      - dev-db
 
   # Celery worker
   worker:
@@ -75,12 +58,8 @@ services:
       - .:/app
     depends_on:
       - rabbit
-      - dev-db
     networks:
       - app-network
 
 networks:
   app-network:
-
-volumes:
-  postgres-db:
