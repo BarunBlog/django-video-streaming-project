@@ -15,7 +15,9 @@ RUN pip3 install -r requirements.txt
 COPY . .
 
 COPY run_web.sh /run_web.sh
+COPY run_web.prod.sh /run_web.prod.sh
 COPY run_celery.sh /run_celery.sh
 
 RUN chmod +x /run_web.sh
+RUN chmod +x /run_web.prod.sh
 RUN chmod +x /run_celery.sh

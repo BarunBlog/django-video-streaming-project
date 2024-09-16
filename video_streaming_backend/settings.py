@@ -29,7 +29,7 @@ DEBUG = os.environ.get('DEBUG', default=0)
 
 ENVIRONMENT = os.environ.get("ENVIRONMENT")
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Application definition
 
@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
+    'middlewares.hostname_middleware.LogHostnameMiddleware',
 ]
 
 # Rest framework configuration
@@ -193,6 +194,7 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
     'http://localhost:8000',
+    'http://localhost'
 ]
 
 CORS_ALLOW_CREDENTIALS = True
