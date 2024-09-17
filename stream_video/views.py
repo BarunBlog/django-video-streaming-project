@@ -117,7 +117,7 @@ class ServeMPDFile(APIView):
             mpd_file_url = video.mpd_file_url
 
             if environment == "development":
-                mpd_file_url = request.build_absolute_uri('/')[:-1].strip("/") + mpd_file_url
+                mpd_file_url = "http://backend-nginx-1:80" + mpd_file_url
 
             response = requests.get(mpd_file_url, stream=True)
 
@@ -141,7 +141,8 @@ class ServeSegmentFile(APIView):
         environment = settings.ENVIRONMENT
 
         try:
-            domain = request.build_absolute_uri('/')[:-1].strip("/")
+            # domain = request.build_absolute_uri('/')[:-1].strip("/")
+            domain = "http://backend-nginx-1:80"
 
             if environment == "production":
                 segment_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid),
