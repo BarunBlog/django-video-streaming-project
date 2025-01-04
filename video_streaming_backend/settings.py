@@ -228,6 +228,20 @@ RATELIMIT_VIEW = 'rate_limit.views.ratelimit_view'
 
 print(f"The environment is {ENVIRONMENT}", flush=True)
 
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+}
+
 if ENVIRONMENT == "production":
     # S3 bucket configuration
     AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
