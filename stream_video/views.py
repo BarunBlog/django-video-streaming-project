@@ -9,8 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import UploadVideoSerializer
-from django.core.files.storage import default_storage
-from .tasks import process_video, apply_dynamic_watermark
+from .tasks import process_video
 from .models import Video
 from .filters import VideoFilter
 from django.db import transaction

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Video, VideoSegment
+from .models import Video, VideoSegment, LastStreamedSegment
 
 
 @admin.register(Video)
@@ -12,3 +12,8 @@ class VideoAdmin(admin.ModelAdmin):
 class VideoSegmentAdmin(admin.ModelAdmin):
     list_display = ('video', 'segment_name')
     search_fields = ('video__title', 'segment_name')
+
+
+@admin.register(LastStreamedSegment)
+class LastStreamedSegmentAdmin(admin.ModelAdmin):
+    list_display = ('user', 'video', 'last_segment', 'updated_at')
