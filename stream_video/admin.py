@@ -10,7 +10,7 @@ class VideoAdmin(admin.ModelAdmin):
 
 @admin.register(VideoSegment)
 class VideoSegmentAdmin(admin.ModelAdmin):
-    list_display = ('video', 'segment_name')
+    list_display = ('id', 'video', 'segment_name')
     search_fields = ('video__title', 'segment_name')
 
 

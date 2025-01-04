@@ -3,7 +3,7 @@ import ffmpeg
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.conf import settings
-from .models import Video
+from .models import Video, VideoSegment
 import shutil
 import boto3
 
@@ -62,6 +62,9 @@ def process_video(video_uuid, video_path):
                 s3_client.upload_file(local_file_path, bucket_name, s3_key)
                 logger.info(f"Uploaded {file} to S3")
 
+                # Save segment data to the database
+                VideoSegment.objects.create(video=video, segment_name=file, segment_url='/' + s3_key)
+
         # Update the video object with the mpd file URL
         video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
                                           'manifest.mpd')
@@ -73,6 +76,14 @@ def process_video(video_uuid, video_path):
         logger.info("Deleted local segment files and parent directory")
 
     else:
+        # Save segment data to the database
+        for root, dirs, files in os.walk(segments_path):
+            for file in files:
+                segment_path = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
+                                            file)
+
+                VideoSegment.objects.create(video=video, segment_name=file, segment_url=segment_path)
+
         # Update the video object with the mpd file URL
         video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
                                           'manifest.mpd')
