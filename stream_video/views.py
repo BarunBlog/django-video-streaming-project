@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from .serializers import UploadVideoSerializer
 from django.core.files.storage import default_storage
-from .tasks import process_video
+from .tasks import process_video, apply_dynamic_watermark
 from .models import Video
 from .filters import VideoFilter
 from django.db import transaction
@@ -141,7 +141,10 @@ class ServeSegmentFile(APIView):
         environment = settings.ENVIRONMENT
 
         try:
-            domain = request.build_absolute_uri('/')[:-1].strip("/")
+            web_host = settings.WEB_HOST
+            web_port = settings.WEB_PORT
+
+            domain = f'http://{web_host}:{web_port}'
 
             if environment == "production":
                 segment_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid),

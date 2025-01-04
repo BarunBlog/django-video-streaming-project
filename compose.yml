@@ -44,6 +44,8 @@ services:
       - "8000:8000"
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
+      - WEB_HOST=${WEB_HOST}
+      - WEB_PORT=${WEB_PORT}
       - DEBUG=${DEBUG}
       - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}

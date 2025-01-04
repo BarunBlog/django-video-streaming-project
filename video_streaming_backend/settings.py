@@ -163,6 +163,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+WEB_HOST = os.environ.get("WEB_HOST")
+WEB_PORT = os.environ.get("WEB_PORT")
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
