@@ -3,7 +3,10 @@ import ffmpeg
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.conf import settings
-from .models import Video, VideoSegment
+from django.contrib.auth.models import User
+from django.db import DatabaseError
+from .models import Video, VideoSegment, LastStreamedSegment
+from . import models
 import shutil
 import boto3
 
@@ -99,3 +102,28 @@ def process_video(video_uuid, video_path):
     logger.info("Deleted the video parent directory")
 
     return "Task Successful"
+
+
+@shared_task
+def update_last_streamed_segment(user: User, video_uuid: str, segment_name: str):
+    logger.info("Start updating the last streamed segment")
+
+    # Get video by video_uuid
+    try:
+        video: Video = models.get_video_by_uuid(video_uuid=video_uuid)
+    except Video.DoesNotExist as e:
+        logger.error("Video not found with the given uuid")
+        return
+
+    # Get video segment by the segment_name
+    try:
+        video_segment: VideoSegment = models.get_video_segment_by_name(video=video, segment_name=segment_name)
+    except VideoSegment.DoesNotExist as e:
+        logger.error(f"Video segment not found with the given segment name")
+        return
+
+    # Update or create the last streamed segment
+    try:
+        models.save_last_streamed_segment(user=user, video=video, segment=video_segment)
+    except DatabaseError as e:
+        logger.error(f"Error updating last streamed segment: {e}")

@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import UploadVideoSerializer
-from .tasks import process_video
+from .tasks import process_video, update_last_streamed_segment
 from .models import Video
 from .filters import VideoFilter
 from django.db import transaction
@@ -156,6 +156,9 @@ class ServeSegmentFile(APIView):
             response = requests.get(segment_file_url, stream=True)
 
             if response.status_code == 200:
+                # Saving the last streamed point for the user using celery worker
+                update_last_streamed_segment(user=request.user, video_uuid=video_uuid, segment_name=segment_name)
+
                 return HttpResponse(response.content, content_type='application/dash+xml')
             else:
                 return Response({"message": "Failed to retrieve the MPD file"}, status=status.HTTP_404_NOT_FOUND)
