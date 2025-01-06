@@ -14,13 +14,22 @@ class UploadVideoSerializer(serializers.ModelSerializer):
 
 class GetVideosSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
+    last_streamed_second = serializers.SerializerMethodField()
 
     class Meta:
         model = Video
-        fields = ('uuid', 'author_name', 'title', 'category', 'thumbnail', 'created_at')
+        fields = ('uuid', 'author_name', 'title', 'category', 'thumbnail', 'created_at', 'last_streamed_second')
 
     def get_author_name(self, obj):
         return obj.author.username
+
+    def get_last_streamed_second(self, obj):
+        user_id = self.context.get("user_id", 0)
+
+        # Get the Last Streamed Point object for the user
+        last_streamed_point: LastStreamedPoint = models.get_last_streamed_point(user_id=user_id, video_uuid=obj.uuid)
+
+        return last_streamed_point.last_played_second
 
 
 class GetVideoDetailSerializer(serializers.ModelSerializer):

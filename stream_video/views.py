@@ -84,6 +84,11 @@ class GetVideos(generics.ListAPIView):
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = VideoFilter
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"user_id": self.request.user.id})
+        return context
+
 
 class GetVideoDetail(generics.RetrieveAPIView):
     queryset = Video.objects.all()
