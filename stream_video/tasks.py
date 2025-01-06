@@ -54,6 +54,19 @@ def process_video(video_uuid, video_path):
 
     logger.info("Successfully generated the video segment files")
 
+    # Extract video metadata
+    logger.info("Extracting video metadata for duration")
+    try:
+        metadata = ffmpeg.probe(video_path)
+        duration = float(metadata['format']['duration'])  # Get the video duration in seconds
+        logger.info(f"Video duration: {duration} seconds")
+    except ffmpeg.Error as e:
+        logger.error("Error extracting metadata: ", e)
+        duration = 0  # Default to 0 if duration can't be extracted
+
+    # Save the duration to the video object
+    video.duration = duration
+
     if environment == "production":
         bucket_name = settings.AWS_STORAGE_BUCKET_NAME
 

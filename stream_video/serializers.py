@@ -1,3 +1,5 @@
+from django.core.exceptions import ObjectDoesNotExist
+
 from . import models
 from rest_framework import serializers
 from .models import Video, LastStreamedPoint
@@ -18,7 +20,9 @@ class GetVideosSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Video
-        fields = ('uuid', 'author_name', 'title', 'category', 'thumbnail', 'created_at', 'last_streamed_second')
+        fields = (
+            'uuid', 'author_name', 'title', 'category', 'thumbnail', 'created_at', 'last_streamed_second', 'duration'
+        )
 
     def get_author_name(self, obj):
         return obj.author.username
@@ -26,10 +30,16 @@ class GetVideosSerializer(serializers.ModelSerializer):
     def get_last_streamed_second(self, obj):
         user_id = self.context.get("user_id", 0)
 
-        # Get the Last Streamed Point object for the user
-        last_streamed_point: LastStreamedPoint = models.get_last_streamed_point(user_id=user_id, video_uuid=obj.uuid)
+        try:
+            # Get the Last Streamed Point object for the user
+            last_streamed_point: LastStreamedPoint = models.get_last_streamed_point(
+                user_id=user_id,
+                video_uuid=obj.uuid
+            )
 
-        return last_streamed_point.last_played_second
+            return last_streamed_point.last_played_second
+        except ObjectDoesNotExist:
+            return 0
 
 
 class GetVideoDetailSerializer(serializers.ModelSerializer):
@@ -49,7 +59,13 @@ class GetVideoDetailSerializer(serializers.ModelSerializer):
     def get_last_streamed_second(self, obj):
         user_id = self.context.get("user_id", 0)
 
-        # Get the Last Streamed Point object for the user
-        last_streamed_point: LastStreamedPoint = models.get_last_streamed_point(user_id=user_id, video_uuid=obj.uuid)
+        try:
+            # Get the Last Streamed Point object for the user
+            last_streamed_point: LastStreamedPoint = models.get_last_streamed_point(
+                user_id=user_id,
+                video_uuid=obj.uuid
+            )
 
-        return last_streamed_point.last_played_second
+            return last_streamed_point.last_played_second
+        except ObjectDoesNotExist:
+            return 0

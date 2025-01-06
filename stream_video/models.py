@@ -26,6 +26,7 @@ class Video(models.Model):
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     thumbnail = models.ImageField(upload_to="stream_video/images/")
+    duration = models.FloatField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     mpd_file_url = models.CharField(max_length=255, null=True, blank=True)
