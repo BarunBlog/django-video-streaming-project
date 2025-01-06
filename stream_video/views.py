@@ -91,6 +91,11 @@ class GetVideoDetail(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated]
     lookup_field = 'uuid'
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"user_id": self.request.user.id})
+        return context
+
 
 # Key is used as the user as the api is authenticated must
 # Rate is 10 requests per 1 minutes

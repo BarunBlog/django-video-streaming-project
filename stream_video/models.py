@@ -83,7 +83,22 @@ class LastStreamedPoint(models.Model):
         return f"{self.user.username} - {self.video.title}"
 
 
-def save_last_streamed_segment(user_id: int, video: Video, last_played_second: int) -> LastStreamedPoint:
+def get_last_streamed_point(user_id: int, video_uuid: str) -> LastStreamedPoint:
+    logger.info("Start getting the last streamed point for the user")
+
+    try:
+        last_streamed_point: LastStreamedPoint = LastStreamedPoint.objects.get(
+            user_id=user_id,
+            video__uuid=video_uuid
+        )
+        return last_streamed_point
+
+    except LastStreamedPoint.DoesNotExist:
+        logger.error("Last streamed point not found for this user for the video uuid %s", video_uuid)
+        raise ObjectDoesNotExist(f"Last streamed point not found for this user for the video uuid {video_uuid}")
+
+
+def save_last_streamed_point(user_id: int, video: Video, last_played_second: int) -> LastStreamedPoint:
     logger.info("Start saving last streamed segment by the user")
 
     try:

@@ -117,6 +117,6 @@ def update_last_streamed_segment(user_id: int, video_uuid: str, last_played_seco
 
     # Update or create the last streamed segment
     try:
-        models.save_last_streamed_segment(user_id=user_id, video=video, last_played_second=last_played_second)
+        models.save_last_streamed_point(user_id=user_id, video=video, last_played_second=last_played_second)
     except DatabaseError as e:
         logger.error(f"Error updating last streamed segment: {e}")
