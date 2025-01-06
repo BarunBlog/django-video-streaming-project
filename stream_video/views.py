@@ -139,6 +139,8 @@ class ServeSegmentFile(APIView):
     def get(self, request, video_uuid, segment_name, *args, **kwargs):
         environment = settings.ENVIRONMENT
 
+        last_played_second = request.query_params.get("playbackTime", None)
+
         try:
             web_host = settings.WEB_HOST
             web_port = settings.WEB_PORT
@@ -157,7 +159,10 @@ class ServeSegmentFile(APIView):
 
             if response.status_code == 200:
                 # Saving the last streamed point for the user using celery worker
-                update_last_streamed_segment(user=request.user, video_uuid=video_uuid, segment_name=segment_name)
+                if last_played_second:
+                    update_last_streamed_segment.delay(
+                        user_id=request.user.id, video_uuid=video_uuid, last_played_second=last_played_second
+                    )
 
                 return HttpResponse(response.content, content_type='application/dash+xml')
             else:

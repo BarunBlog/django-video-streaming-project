@@ -70,10 +70,10 @@ def get_video_segment_by_name(video: Video, segment_name: str) -> VideoSegment:
         raise ObjectDoesNotExist(f"Video segment with name {segment_name} does not exist.")
 
 
-class LastStreamedSegment(models.Model):
+class LastStreamedPoint(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='stream_points')
     video = models.ForeignKey(Video, on_delete=models.CASCADE, related_name='stream_points')
-    last_segment = models.ForeignKey(VideoSegment, on_delete=models.SET_NULL, null=True, blank=True)
+    last_played_second = models.PositiveIntegerField(default=0)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -83,23 +83,23 @@ class LastStreamedSegment(models.Model):
         return f"{self.user.username} - {self.video.title}"
 
 
-def save_last_streamed_segment(user: User, video: Video, segment: VideoSegment) -> LastStreamedSegment:
+def save_last_streamed_segment(user_id: int, video: Video, last_played_second: int) -> LastStreamedPoint:
     logger.info("Start saving last streamed segment by the user")
 
     try:
         # Create or update the last streamed segment
-        obj, created = LastStreamedSegment.objects.update_or_create(
-            user=user, video=video, defaults={'last_segment': segment}
+        obj, created = LastStreamedPoint.objects.update_or_create(
+            user_id=user_id, video=video, defaults={'last_played_second': last_played_second}
         )
 
         if created:
-            logger.info("Created a new LastStreamedSegment for user %s and video %s.", user.username, video.title)
+            logger.info("Created a new LastStreamedPoint for user_id %s and video %s.", user_id, video.title)
         else:
-            logger.info("Updated the last streamed segment for user %s and video %s.", user.username, video.title)
+            logger.info("Updated the last streamed segment for user_id %s and video %s.", user_id, video.title)
 
         return obj
 
     except DatabaseError as e:
-        logger.exception("Database error occurred while saving last streamed segment for user %s and video %s.",
-                         user.username, video.title)
+        logger.exception("Database error occurred while saving last streamed segment for user_id %s and video %s.",
+                         user_id, video.title)
         raise e

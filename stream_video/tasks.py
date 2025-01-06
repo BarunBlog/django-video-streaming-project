@@ -5,7 +5,7 @@ from celery.utils.log import get_task_logger
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.db import DatabaseError
-from .models import Video, VideoSegment, LastStreamedSegment
+from .models import Video, VideoSegment, LastStreamedPoint
 from . import models
 import shutil
 import boto3
@@ -105,7 +105,7 @@ def process_video(video_uuid, video_path):
 
 
 @shared_task
-def update_last_streamed_segment(user: User, video_uuid: str, segment_name: str):
+def update_last_streamed_segment(user_id: int, video_uuid: str, last_played_second: int):
     logger.info("Start updating the last streamed segment")
 
     # Get video by video_uuid
@@ -115,15 +115,8 @@ def update_last_streamed_segment(user: User, video_uuid: str, segment_name: str)
         logger.error("Video not found with the given uuid")
         return
 
-    # Get video segment by the segment_name
-    try:
-        video_segment: VideoSegment = models.get_video_segment_by_name(video=video, segment_name=segment_name)
-    except VideoSegment.DoesNotExist as e:
-        logger.error(f"Video segment not found with the given segment name")
-        return
-
     # Update or create the last streamed segment
     try:
-        models.save_last_streamed_segment(user=user, video=video, segment=video_segment)
+        models.save_last_streamed_segment(user_id=user_id, video=video, last_played_second=last_played_second)
     except DatabaseError as e:
         logger.error(f"Error updating last streamed segment: {e}")
