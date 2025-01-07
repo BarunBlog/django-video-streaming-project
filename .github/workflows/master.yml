@@ -3,7 +3,7 @@ name: Continuous Integration
 on:
   push:
     branches:
-      - job-queue-system
+      - master
 
 concurrency:
   group: master
