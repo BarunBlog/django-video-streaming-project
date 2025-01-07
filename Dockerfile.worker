@@ -1,0 +1,18 @@
+FROM python:3.10-alpine
+
+# Install FFmpeg and other necessary packages
+RUN apk update && apk add --no-cache \
+    ffmpeg \
+    make
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip3 install -r requirements.txt
+
+COPY . .
+
+COPY run_celery.sh /run_celery.sh
+
+RUN chmod +x /run_celery.sh

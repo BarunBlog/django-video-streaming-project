@@ -30,7 +30,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.web
     container_name: video-streaming-backend
     restart: unless-stopped
     command: sh ./run_web.sh
@@ -55,28 +55,6 @@ services:
       - app-network
     depends_on:
       - dev-db
-
-  # Celery worker
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - ENVIRONMENT=${ENVIRONMENT}
-      - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-      - CELERY_BROKER_URL=redis://${REDIS_HOST}:${REDIS_PORT}/0
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
-      - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
-    command: sh ./run_celery.sh
-    volumes:
-      - .:/app
-    depends_on:
-      - redis
-      - dev-db
-    networks:
-      - app-network
 
 networks:
   app-network:
