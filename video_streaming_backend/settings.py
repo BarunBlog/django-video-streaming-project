@@ -203,14 +203,14 @@ CORS_ALLOW_HEADERS = ('content-type', 'accept', 'accept-encoding', 'authorizatio
                       'Custom-User-Agent', 'media_type', 'dnt', 'origin', 'user-agent', 'x-csrftoken',
                       'x-requested-with')
 
-# RabbitMQ configurations
-RABBITMQ = {
-    "PROTOCOL": "amqp",  # in prod change with "amqps"
-    "HOST": os.environ.get("RABBITMQ_HOST", "localhost"),
-    "PORT": os.environ.get("RABBITMQ_PORT", 5672),
-    "USER": os.environ.get("RABBITMQ_USER", "guest"),
-    "PASSWORD": os.environ.get("RABBITMQ_PASSWORD", "guest"),
-}
+# # RabbitMQ configurations
+# RABBITMQ = {
+#     "PROTOCOL": "amqp",  # in prod change with "amqps"
+#     "HOST": os.environ.get("RABBITMQ_HOST", "localhost"),
+#     "PORT": os.environ.get("RABBITMQ_PORT", 5672),
+#     "USER": os.environ.get("RABBITMQ_USER", "guest"),
+#     "PASSWORD": os.environ.get("RABBITMQ_PASSWORD", "guest"),
+# }
 
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
 
@@ -221,7 +221,7 @@ CELERY_TASK_SERIALIZER = 'json'
 
 # to use the database
 CELERY_RESULT_BACKEND = "django-db"
-CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_CACHE_BACKEND = 'redis'
 
 # Rate limit view
 RATELIMIT_VIEW = 'rate_limit.views.ratelimit_view'
