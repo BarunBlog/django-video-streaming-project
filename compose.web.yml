@@ -53,11 +53,6 @@ services:
       - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
     networks:
       - app-network
-    depends_on:
-      - dev-db
 
 networks:
   app-network:
-
-volumes:
-  postgres-db:

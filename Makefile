@@ -11,6 +11,10 @@ compose-up: |
 	docker compose up --build --remove-orphans
 	docker image prune --force
 
+compose-prod-up: |
+	docker compose -f docker-compose.prod.yml up --build --remove-orphans
+	docker image prune --force
+
 docker-clean:
 	docker system prune -f # Remove unused cache, data, images
 

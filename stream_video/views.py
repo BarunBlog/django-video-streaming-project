@@ -126,7 +126,7 @@ class ServeMPDFile(APIView):
             mpd_file_url = video.mpd_file_url
 
             if environment == "development":
-                mpd_file_url = request.build_absolute_uri('/')[:-1].strip("/") + mpd_file_url
+                mpd_file_url = "http://backend-nginx-1:80" + mpd_file_url
 
             response = requests.get(mpd_file_url, stream=True)
 
