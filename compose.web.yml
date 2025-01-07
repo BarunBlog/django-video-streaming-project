@@ -37,6 +37,7 @@ services:
     volumes:
       - .:/app
       - ./media:/app/media
+      - static_volume:/app/static
     ports:
       - "8000:8000"
     environment:
@@ -53,6 +54,25 @@ services:
       - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
     networks:
       - app-network
+    depends_on:
+      - dev-db
+
+  nginx:
+    image: nginx:1.23-alpine
+    ports:
+      - "80:80" # External port 80 to internal port 80 of nginx
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf  # Mount the custom Nginx config file into docker
+      - static_volume:/app/static  # Mount the static files into NGINX
+      - ./media:/app/media # Mount the media files into NGINX
+    depends_on:
+      - web
+    networks:
+      - app-network
 
 networks:
   app-network:
+
+volumes:
+  postgres-db:
+  static_volume:

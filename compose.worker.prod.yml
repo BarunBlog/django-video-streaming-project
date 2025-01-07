@@ -16,8 +16,6 @@ services:
     command: sh ./run_celery.sh
     volumes:
       - .:/app
-    networks:
-      - app-network
 
 networks:
-  app-network:
+  worker-network:

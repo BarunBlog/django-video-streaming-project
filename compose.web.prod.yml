@@ -1,15 +1,18 @@
 services:
 
-  # RabbitMQ
-  rabbit:
-    hostname: rabbit
-    image: rabbitmq:3.6.9-management
-    environment:
-      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
-      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+  # Database
+  dev-db:
+    image: postgres:latest
+    container_name: video-streaming-db
+    volumes:
+      - postgres-db:/data/postgres
+    restart: unless-stopped
     ports:
-      - "5673:5672"
-      - "15672:15672"
+      - "5430:5432" # host port : internal service port
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     networks:
       - app-network
 
@@ -17,53 +20,35 @@ services:
   web:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.web
+    container_name: video-streaming-backend
     restart: unless-stopped
-    command: sh ./run_web.prod.sh
+    command: sh ./run_web.sh
     volumes:
       - .:/app
       - ./media:/app/media
       - static_volume:/app/static
     ports:
-      - "8000-8002:8000"
-    deploy:
-      replicas: 3
+      - "8000:8000"
     environment:
       - ENVIRONMENT=${ENVIRONMENT}
+      - WEB_HOST=${WEB_HOST}
+      - WEB_PORT=${WEB_PORT}
       - DEBUG=${DEBUG}
       - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}
+      - CELERY_BROKER_URL=redis://${REDIS_HOST}:${REDIS_PORT}/0
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
       - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
     networks:
       - app-network
-
-  # Celery worker
-  worker:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    environment:
-      - ENVIRONMENT=${ENVIRONMENT}
-      - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
-      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
-      - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
-    command: sh ./run_celery.sh
-    volumes:
-      - .:/app
     depends_on:
-      - rabbit
-    networks:
-      - app-network
+      - dev-db
 
   nginx:
-    image: nginx:latest
+    image: nginx:1.23-alpine
     ports:
       - "80:80" # External port 80 to internal port 80 of nginx
     volumes:
@@ -79,4 +64,5 @@ networks:
   app-network:
 
 volumes:
+  postgres-db:
   static_volume:
