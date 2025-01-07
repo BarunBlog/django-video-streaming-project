@@ -60,10 +60,10 @@ jobs:
             DB_HOST=${{ secrets.DB_HOST }}
             DB_PORT=${{ secrets.DB_PORT }}
             DB_NAME=${{ secrets.DB_NAME }}
-            REDIS_HOST=${{ REDIS_HOST }}
-            REDIS_PORT=${{ REDIS_PORT }}
-            WEB_HOST=${{ WEB_HOST }}
-            WEB_PORT=${{ WEB_PORT }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            WEB_HOST=${{ secrets.WEB_HOST }}
+            WEB_PORT=${{ secrets.WEB_PORT }}
             EOF
           ENDSSH
 
@@ -124,10 +124,10 @@ jobs:
             DB_HOST=${{ secrets.DB_HOST }}
             DB_PORT=${{ secrets.DB_PORT }}
             DB_NAME=${{ secrets.DB_NAME }}
-            REDIS_HOST=${{ REDIS_HOST }}
-            REDIS_PORT=${{ REDIS_PORT }}
-            WEB_HOST=${{ WEB_HOST }}
-            WEB_PORT=${{ WEB_PORT }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            WEB_HOST=${{ secrets.WEB_HOST }}
+            WEB_PORT=${{ secrets.WEB_PORT }}
             EOF
           ENDSSH
 
