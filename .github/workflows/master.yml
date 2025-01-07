@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   deploy-app-server:
-    name: Deploy App Aerver
+    name: Deploy App Server
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
