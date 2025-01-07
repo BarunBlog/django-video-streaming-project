@@ -9,8 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import UploadVideoSerializer
-from django.core.files.storage import default_storage
-from .tasks import process_video
+from .tasks import process_video, update_last_streamed_segment
 from .models import Video
 from .filters import VideoFilter
 from django.db import transaction
@@ -85,12 +84,22 @@ class GetVideos(generics.ListAPIView):
     filter_backends = (filters.DjangoFilterBackend,)
     filterset_class = VideoFilter
 
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"user_id": self.request.user.id})
+        return context
+
 
 class GetVideoDetail(generics.RetrieveAPIView):
     queryset = Video.objects.all()
     serializer_class = GetVideoDetailSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'uuid'
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context.update({"user_id": self.request.user.id})
+        return context
 
 
 # Key is used as the user as the api is authenticated must
@@ -117,7 +126,7 @@ class ServeMPDFile(APIView):
             mpd_file_url = video.mpd_file_url
 
             if environment == "development":
-                mpd_file_url = request.build_absolute_uri('/')[:-1].strip("/") + mpd_file_url
+                mpd_file_url = "http://backend-nginx-1:80" + mpd_file_url
 
             response = requests.get(mpd_file_url, stream=True)
 
@@ -140,8 +149,13 @@ class ServeSegmentFile(APIView):
     def get(self, request, video_uuid, segment_name, *args, **kwargs):
         environment = settings.ENVIRONMENT
 
+        last_played_second = request.query_params.get("playbackTime", None)
+
         try:
-            domain = request.build_absolute_uri('/')[:-1].strip("/")
+            web_host = settings.WEB_HOST
+            web_port = settings.WEB_PORT
+
+            domain = f'http://{web_host}:{web_port}'
 
             if environment == "production":
                 segment_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid),
@@ -154,6 +168,12 @@ class ServeSegmentFile(APIView):
             response = requests.get(segment_file_url, stream=True)
 
             if response.status_code == 200:
+                # Saving the last streamed point for the user using celery worker
+                if last_played_second:
+                    update_last_streamed_segment.delay(
+                        user_id=request.user.id, video_uuid=video_uuid, last_played_second=last_played_second
+                    )
+
                 return HttpResponse(response.content, content_type='application/dash+xml')
             else:
                 return Response({"message": "Failed to retrieve the MPD file"}, status=status.HTTP_404_NOT_FOUND)

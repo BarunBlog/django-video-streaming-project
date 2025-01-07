@@ -3,7 +3,10 @@ import ffmpeg
 from celery import shared_task
 from celery.utils.log import get_task_logger
 from django.conf import settings
-from .models import Video
+from django.contrib.auth.models import User
+from django.db import DatabaseError
+from .models import Video, VideoSegment, LastStreamedPoint
+from . import models
 import shutil
 import boto3
 
@@ -51,6 +54,19 @@ def process_video(video_uuid, video_path):
 
     logger.info("Successfully generated the video segment files")
 
+    # Extract video metadata
+    logger.info("Extracting video metadata for duration")
+    try:
+        metadata = ffmpeg.probe(video_path)
+        duration = float(metadata['format']['duration'])  # Get the video duration in seconds
+        logger.info(f"Video duration: {duration} seconds")
+    except ffmpeg.Error as e:
+        logger.error("Error extracting metadata: ", e)
+        duration = 0  # Default to 0 if duration can't be extracted
+
+    # Save the duration to the video object
+    video.duration = duration
+
     if environment == "production":
         bucket_name = settings.AWS_STORAGE_BUCKET_NAME
 
@@ -61,6 +77,9 @@ def process_video(video_uuid, video_path):
                 s3_key = os.path.join('media', 'stream_video', 'chunks', str(video_uuid), 'segments', file)
                 s3_client.upload_file(local_file_path, bucket_name, s3_key)
                 logger.info(f"Uploaded {file} to S3")
+
+                # Save segment data to the database
+                VideoSegment.objects.create(video=video, segment_name=file, segment_url='/' + s3_key)
 
         # Update the video object with the mpd file URL
         video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
@@ -73,6 +92,14 @@ def process_video(video_uuid, video_path):
         logger.info("Deleted local segment files and parent directory")
 
     else:
+        # Save segment data to the database
+        for root, dirs, files in os.walk(segments_path):
+            for file in files:
+                segment_path = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
+                                            file)
+
+                VideoSegment.objects.create(video=video, segment_name=file, segment_url=segment_path)
+
         # Update the video object with the mpd file URL
         video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
                                           'manifest.mpd')
@@ -88,3 +115,21 @@ def process_video(video_uuid, video_path):
     logger.info("Deleted the video parent directory")
 
     return "Task Successful"
+
+
+@shared_task
+def update_last_streamed_segment(user_id: int, video_uuid: str, last_played_second: int):
+    logger.info("Start updating the last streamed segment")
+
+    # Get video by video_uuid
+    try:
+        video: Video = models.get_video_by_uuid(video_uuid=video_uuid)
+    except Video.DoesNotExist as e:
+        logger.error("Video not found with the given uuid")
+        return
+
+    # Update or create the last streamed segment
+    try:
+        models.save_last_streamed_point(user_id=user_id, video=video, last_played_second=last_played_second)
+    except DatabaseError as e:
+        logger.error(f"Error updating last streamed segment: {e}")

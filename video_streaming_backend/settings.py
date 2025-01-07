@@ -29,7 +29,7 @@ DEBUG = os.environ.get('DEBUG', default=0)
 
 ENVIRONMENT = os.environ.get("ENVIRONMENT")
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 # Application definition
 
@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_ratelimit.middleware.RatelimitMiddleware',
+    'middlewares.hostname_middleware.LogHostnameMiddleware',
 ]
 
 # Rest framework configuration
@@ -163,6 +164,9 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+WEB_HOST = os.environ.get("WEB_HOST")
+WEB_PORT = os.environ.get("WEB_PORT")
+
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
@@ -193,6 +197,7 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
     'http://localhost:8000',
+    'http://localhost'
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -200,14 +205,14 @@ CORS_ALLOW_HEADERS = ('content-type', 'accept', 'accept-encoding', 'authorizatio
                       'Custom-User-Agent', 'media_type', 'dnt', 'origin', 'user-agent', 'x-csrftoken',
                       'x-requested-with')
 
-# RabbitMQ configurations
-RABBITMQ = {
-    "PROTOCOL": "amqp",  # in prod change with "amqps"
-    "HOST": os.environ.get("RABBITMQ_HOST", "localhost"),
-    "PORT": os.environ.get("RABBITMQ_PORT", 5672),
-    "USER": os.environ.get("RABBITMQ_USER", "guest"),
-    "PASSWORD": os.environ.get("RABBITMQ_PASSWORD", "guest"),
-}
+# # RabbitMQ configurations
+# RABBITMQ = {
+#     "PROTOCOL": "amqp",  # in prod change with "amqps"
+#     "HOST": os.environ.get("RABBITMQ_HOST", "localhost"),
+#     "PORT": os.environ.get("RABBITMQ_PORT", 5672),
+#     "USER": os.environ.get("RABBITMQ_USER", "guest"),
+#     "PASSWORD": os.environ.get("RABBITMQ_PASSWORD", "guest"),
+# }
 
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
 
@@ -218,12 +223,26 @@ CELERY_TASK_SERIALIZER = 'json'
 
 # to use the database
 CELERY_RESULT_BACKEND = "django-db"
-CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_CACHE_BACKEND = 'redis'
 
 # Rate limit view
 RATELIMIT_VIEW = 'rate_limit.views.ratelimit_view'
 
 print(f"The environment is {ENVIRONMENT}", flush=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+}
 
 if ENVIRONMENT == "production":
     # S3 bucket configuration
