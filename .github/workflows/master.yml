@@ -71,10 +71,10 @@ jobs:
         run: |
           ssh target <<'ENDSSH'
             cd django-video-streaming-project/
-            docker compose -f compose.web.prod.yml down
+            sudo docker-compose -f compose.web.prod.yml down
             git pull
-            docker compose -f compose.web.prod.yml build --no-cache
-            docker compose -f compose.web.prod.yml up -d --force-recreate
+            sudo docker-compose -f compose.web.prod.yml build --no-cache
+            sudo docker-compose -f compose.web.prod.yml up -d --force-recreate
           ENDSSH
 
 
@@ -137,10 +137,10 @@ jobs:
 
       - name: Deploy to Worker Server
         run: |
-          ssh worker-server <<'ENDSSH'
+          ssh target <<'ENDSSH'
             cd django-video-streaming-project/
-            docker compose -f compose.worker.prod.yml down
+            sudo docker-compose -f compose.worker.prod.yml down
             git pull
-            docker compose -f compose.worker.prod.yml build --no-cache
-            docker compose -f compose.worker.prod.yml up -d --force-recreate
+            sudo docker-compose -f compose.worker.prod.yml build --no-cache
+            sudo docker-compose -f compose.worker.prod.yml up -d --force-recreate
           ENDSSH
