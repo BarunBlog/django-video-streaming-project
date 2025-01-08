@@ -71,10 +71,10 @@ jobs:
         run: |
           ssh target <<'ENDSSH'
             cd django-video-streaming-project/
-            docker-compose -f compose.web.prod.yml down
+            docker compose -f compose.web.prod.yml down
             git pull
-            docker-compose -f compose.web.prod.yml build --no-cache
-            docker-compose -f compose.web.prod.yml up -d --force-recreate
+            docker compose -f compose.web.prod.yml build --no-cache
+            docker compose -f compose.web.prod.yml up -d --force-recreate
           ENDSSH
 
 
@@ -95,14 +95,14 @@ jobs:
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/github
           chmod 600 ~/.ssh/github
           cat >>~/.ssh/config <<END
-          Host worker-server
+          Host target
             HostName $SSH_HOST
             User $SSH_USER
             IdentityFile ~/.ssh/github
             LogLevel ERROR
             StrictHostKeyChecking no
           END
-      
+
       - name: Test SSH Connection
         run: |
           ssh -T target echo "SSH connection established"
@@ -139,8 +139,8 @@ jobs:
         run: |
           ssh worker-server <<'ENDSSH'
             cd django-video-streaming-project/
-            docker-compose -f compose.worker.prod.yml down
+            docker compose -f compose.worker.prod.yml down
             git pull
-            docker-compose -f compose.worker.prod.yml build --no-cache
-            docker-compose -f compose.worker.prod.yml up -d --force-recreate
+            docker compose -f compose.worker.prod.yml build --no-cache
+            docker compose -f compose.worker.prod.yml up -d --force-recreate
           ENDSSH
