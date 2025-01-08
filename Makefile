@@ -79,7 +79,7 @@ generate_video_segments_with_sound: |
 
 
 generate-ssh-key:
-	ssh-keygen -t rsa -b 4090 -f ~/.ssh/github
+	ssh-keygen -t rsa -b 4096 -f ~/.ssh/github
 
 modify-ec2-auth-keys:
 	sudo nano ~/.ssh/authorized_keys

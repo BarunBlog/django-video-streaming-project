@@ -102,6 +102,10 @@ jobs:
             LogLevel ERROR
             StrictHostKeyChecking no
           END
+      
+      - name: Test SSH Connection
+        run: |
+          ssh -T target echo "SSH connection established"
 
       - name: Clone Repository (if needed)
         run: |
