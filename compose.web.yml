@@ -24,7 +24,7 @@ services:
     ports:
       - "6379:6379"
     networks:
-      - app-network
+      - redis-network
 
   # Web server
   web:
@@ -48,12 +48,14 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
       - CELERY_BROKER_URL=redis://${REDIS_HOST}:${REDIS_PORT}/0
+      - CELERY_RESULT_BACKEND=redis://${REDIS_HOST}:${REDIS_PORT}/0
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
       - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
       - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
     networks:
       - app-network
+      - redis-network  # Connect the web service to both networks
     depends_on:
       - dev-db
 
@@ -70,9 +72,55 @@ services:
     networks:
       - app-network
 
+  # Celery worker
+  worker1:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - CELERY_BROKER_URL=redis://${REDIS_HOST}:${REDIS_PORT}/0
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
+      - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
+    command: sh ./run_celery.sh
+    volumes:
+      - .:/app
+    networks:
+      - worker-network
+      - redis-network # Connect the worker to both networks
+
+  worker2:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+      - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      - CELERY_BROKER_URL=redis://${REDIS_HOST}:${REDIS_PORT}/0
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
+      - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
+    command: sh ./run_celery.sh
+    volumes:
+      - .:/app
+    networks:
+      - worker-network
+      - redis-network # Connect the worker to both networks
+
+
 networks:
   app-network:
-
+    driver: bridge
+  worker-network:
+    driver: bridge
+  redis-network:
+    driver: bridge
+  flower-network:
+    driver: bridge
 volumes:
   postgres-db:
   static_volume:
