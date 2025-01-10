@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import UploadVideoSerializer
-from .tasks import update_last_streamed_segment, process_video, process_video_func
+from .tasks import update_last_streamed_segment, process_video
 from .models import Video
 from .filters import VideoFilter
 from django.db import transaction

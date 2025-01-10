@@ -1,9 +1,10 @@
 import os
 import ffmpeg
+from botocore.exceptions import NoCredentialsError, BotoCoreError
 from video_streaming_backend.celery import app
 from celery import states, chain
 from celery.utils.log import get_task_logger
-from celery.exceptions import Retry, Ignore
+from celery.exceptions import Retry, Ignore, MaxRetriesExceededError
 from django.conf import settings
 from django.db import DatabaseError
 from .models import Video, VideoSegment
@@ -17,6 +18,9 @@ logger = get_task_logger(__name__)
 @app.task(bind=True, name="setup_and_generate_segments")
 def setup_and_generate_segments(self, video_uuid, video_path):
     logger.info("Start creating the folder for chunk files for the video")
+
+    # Mark the task as "Processing"
+    self.update_state(state=states.STARTED, meta={"status": "Processing"})
 
     segments_path = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'chunks', str(video_uuid), 'segments')
     os.makedirs(segments_path, exist_ok=True)
@@ -40,10 +44,13 @@ def setup_and_generate_segments(self, video_uuid, video_path):
             .run()
         )
     except ffmpeg.Error as e:
-        logger.error(f"Error during segment generation: {e}")
+        error_message = f"Error during segment generation: {e}"
+        logger.error(error_message)
+        self.update_state(state=states.FAILURE, meta={"status": error_message})
         raise Ignore()
 
     logger.info("Successfully generated the video segment files")
+    self.update_state(state=states.SUCCESS, meta={"status": "Completed"})
 
     return {
         "video_uuid": video_uuid,
@@ -69,10 +76,13 @@ def extract_video_metadata(self, setup_data):
     return setup_data
 
 
-@app.task(bind=True, name="upload_segments_to_s3")
+@app.task(bind=True, name="upload_segments_to_s3", max_retries=2)
 def upload_segments_to_s3(self, setup_data):
     if settings.ENVIRONMENT == "production":
         logger.info("Uploading segments to S3.")
+
+        self.update_state(state=states.STARTED, meta={"status": "Processing"})
+
         s3_client = boto3.client('s3')
         bucket_name = settings.AWS_STORAGE_BUCKET_NAME
         segments_path = setup_data["segments_path"]
@@ -82,14 +92,39 @@ def upload_segments_to_s3(self, setup_data):
             for file in files:
                 local_file_path = os.path.join(root, file)
                 s3_key = os.path.join('media', 'stream_video', 'chunks', str(video_uuid), 'segments', file)
-                s3_client.upload_file(local_file_path, bucket_name, s3_key)
+
+                try:
+                    logger.info(f"Uploading {file} to S3...")
+                    s3_client.upload_file(local_file_path, bucket_name, s3_key)
+                    logger.info(f"Uploaded {file} successfully.")
+                except (BotoCoreError, NoCredentialsError) as e:
+                    logger.error(f"Error uploading {file} to S3: {e}")
+
+                    # Retry the task
+                    try:
+                        raise self.retry(
+                            countdown=5,  # Retry after 5 seconds
+                            exc=e,
+                            max_retries=self.max_retries  # Maximum retries
+                        )
+                    except MaxRetriesExceededError:
+                        logger.error(f"Maximum retries exceeded for {file}.")
+                        self.update_state(
+                            state=states.FAILURE,
+                            meta={"status": f"Failed to upload {file} after {self.max_retries} retries."}
+                        )
+                        raise Retry(f"Max retries reached for {file}.")
 
     return setup_data
 
 
 @app.task(bind=True, name="save_segments_to_db")
 def save_segments_to_db(self, setup_data):
-    logger.info("Saving segments to database.")
+    logger.info("Saving segments data to database.")
+
+    # Mark the task as "Processing"
+    self.update_state(state=states.STARTED, meta={"status": "Processing"})
+
     video = Video.objects.get(uuid=setup_data["video_uuid"])
     segments_path = setup_data["segments_path"]
     video_uuid = setup_data["video_uuid"]
@@ -103,6 +138,8 @@ def save_segments_to_db(self, setup_data):
                                       'manifest.mpd')
     video.duration = setup_data.get("duration", 0)
     video.save()
+
+    self.update_state(state=states.SUCCESS, meta={"status": "Completed"})
 
     return setup_data
 
@@ -130,7 +167,7 @@ def cleanup_files(self, setup_data):
     return "Task Successful"
 
 
-def process_video_func(video_uuid: str, video_path: str):
+def process_video(video_uuid: str, video_path: str):
     # Define the chain
     video_processing_chain = chain(
         setup_and_generate_segments.s(video_uuid, video_path),
