@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import UploadVideoSerializer
-from .tasks import process_video, update_last_streamed_segment
+from .tasks import update_last_streamed_segment, process_video, process_video_func
 from .models import Video
 from .filters import VideoFilter
 from django.db import transaction
@@ -65,8 +65,8 @@ class UploadVideo(APIView):
                             destination.write(chunk)
 
                     # Call the Celery task to process the video
-                    process_video.delay(video_uuid=str(video.uuid), video_path=video_path)
-
+                    # process_video.delay(video_uuid=str(video.uuid), video_path=video_path)
+                    process_video_func(video.uuid, video_path)
                     return Response({"message": "Video uploaded successfully. Processing in background."},
                                     status=status.HTTP_201_CREATED)
 
@@ -114,7 +114,7 @@ class ServeMPDFile(APIView):
         # Get video object by uuid
         try:
             video: Video = Video.objects.get(uuid=video_uuid)
-        except ObjectDoesNotExist:
+        except  Video.objects.get:
             return Response({"message": "Video not found"}, status=status.HTTP_404_NOT_FOUND)
 
         if not video.mpd_file_url:

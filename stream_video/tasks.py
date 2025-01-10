@@ -1,7 +1,7 @@
 import os
 import ffmpeg
 from video_streaming_backend.celery import app
-from celery import states
+from celery import states, chain
 from celery.utils.log import get_task_logger
 from celery.exceptions import Retry, Ignore
 from django.conf import settings
@@ -14,27 +14,17 @@ import boto3
 logger = get_task_logger(__name__)
 
 
-@app.task(bind=True, name="process_video")
-def process_video(self, video_uuid, video_path):
-    logger.info("Start getting the video object from uuid")
-
-    environment = settings.ENVIRONMENT
-    s3_client = boto3.client('s3')
-
-    video = Video.objects.get(uuid=video_uuid)
-
+@app.task(bind=True, name="setup_and_generate_segments")
+def setup_and_generate_segments(self, video_uuid, video_path):
     logger.info("Start creating the folder for chunk files for the video")
 
-    # Path to store the video segments and mpd file
     segments_path = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'chunks', str(video_uuid), 'segments')
-    mpd_path = os.path.join(segments_path, 'manifest.mpd')
-
-    # Create folder to store segments
     os.makedirs(segments_path, exist_ok=True)
 
-    logger.info("Start generating the chunk files for the video")
+    logger.info("Generating segments and MPD file.")
 
-    # Command to split video into segments and create mpd file audio
+    mpd_path = os.path.join(segments_path, 'manifest.mpd')
+
     try:
         (
             ffmpeg
@@ -45,77 +35,113 @@ def process_video(self, video_uuid, video_path):
                     video_bitrate='2400k',
                     video_size='1920x1080',
                     vcodec='libx264',
-                    seg_duration='4',  # Sets segment duration to 4 seconds
+                    seg_duration='4',
                     acodec='copy')
             .run()
         )
     except ffmpeg.Error as e:
-        logger.error(e)
-        print('Error occurred: ', e, flush=True)
+        logger.error(f"Error during segment generation: {e}")
+        raise Ignore()
 
     logger.info("Successfully generated the video segment files")
 
-    # Extract video metadata
-    logger.info("Extracting video metadata for duration")
+    return {
+        "video_uuid": video_uuid,
+        "video_path": video_path,
+        "segments_path": segments_path,
+    }
+
+
+@app.task(bind=True, name="extract_video_metadata")
+def extract_video_metadata(self, setup_data):
+    logger.info("Extracting video metadata.")
+    video_path = setup_data["video_path"]
+
     try:
         metadata = ffmpeg.probe(video_path)
-        duration = float(metadata['format']['duration'])  # Get the video duration in seconds
-        logger.info(f"Video duration: {duration} seconds")
+        duration = float(metadata['format']['duration'])
+        setup_data["duration"] = duration
+        logger.info(f"Video duration: {duration} seconds.")
     except ffmpeg.Error as e:
-        logger.error("Error extracting metadata: ", e)
-        duration = 0  # Default to 0 if duration can't be extracted
+        logger.error(f"Error extracting metadata: {e}")
+        setup_data["duration"] = 0
 
-    # Save the duration to the video object
-    video.duration = duration
+    return setup_data
 
-    if environment == "production":
+
+@app.task(bind=True, name="upload_segments_to_s3")
+def upload_segments_to_s3(self, setup_data):
+    if settings.ENVIRONMENT == "production":
+        logger.info("Uploading segments to S3.")
+        s3_client = boto3.client('s3')
         bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+        segments_path = setup_data["segments_path"]
+        video_uuid = setup_data["video_uuid"]
 
-        # Upload the segments and mpd file to S3
         for root, dirs, files in os.walk(segments_path):
             for file in files:
                 local_file_path = os.path.join(root, file)
                 s3_key = os.path.join('media', 'stream_video', 'chunks', str(video_uuid), 'segments', file)
                 s3_client.upload_file(local_file_path, bucket_name, s3_key)
-                logger.info(f"Uploaded {file} to S3")
 
-                # Save segment data to the database
-                VideoSegment.objects.create(video=video, segment_name=file, segment_url='/' + s3_key)
+    return setup_data
 
-        # Update the video object with the mpd file URL
-        video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
-                                          'manifest.mpd')
-        video.save()
 
-        # Clean up the local segment files
-        segments_parent_directory = os.path.dirname(segments_path)
-        shutil.rmtree(segments_parent_directory, ignore_errors=True)
-        logger.info("Deleted local segment files and parent directory")
+@app.task(bind=True, name="save_segments_to_db")
+def save_segments_to_db(self, setup_data):
+    logger.info("Saving segments to database.")
+    video = Video.objects.get(uuid=setup_data["video_uuid"])
+    segments_path = setup_data["segments_path"]
+    video_uuid = setup_data["video_uuid"]
 
-    else:
-        # Save segment data to the database
-        for root, dirs, files in os.walk(segments_path):
-            for file in files:
-                segment_path = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
-                                            file)
+    for root, dirs, files in os.walk(segments_path):
+        for file in files:
+            segment_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments', file)
+            VideoSegment.objects.create(video=video, segment_name=file, segment_url=segment_url)
 
-                VideoSegment.objects.create(video=video, segment_name=file, segment_url=segment_path)
+    video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
+                                      'manifest.mpd')
+    video.duration = setup_data.get("duration", 0)
+    video.save()
 
-        # Update the video object with the mpd file URL
-        video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
-                                          'manifest.mpd')
-        video.save()
+    return setup_data
+
+
+@app.task(bind=True, name="cleanup_files")
+def cleanup_files(self, setup_data):
+    logger.info("Cleaning up temporary files.")
+    video_path = setup_data["video_path"]
+    segments_parent_path = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'chunks', str(setup_data["video_uuid"]))
+    environment = settings.ENVIRONMENT
+
+    if environment == "production":
+        shutil.rmtree(os.path.dirname(segments_parent_path), ignore_errors=True)
+        logger.info("Deleted the video segment files")
 
     # Clean up the temporary video file
     os.remove(video_path)
-    logger.info("Deleted the video file permanently")
 
     # Remove the parent directory of the video file
     parent_directory = os.path.dirname(video_path)
     shutil.rmtree(parent_directory, ignore_errors=True)
-    logger.info("Deleted the video parent directory")
+
+    logger.info("Deleted the video and parent directory")
 
     return "Task Successful"
+
+
+def process_video_func(video_uuid: str, video_path: str):
+    # Define the chain
+    video_processing_chain = chain(
+        setup_and_generate_segments.s(video_uuid, video_path),
+        extract_video_metadata.s(),
+        upload_segments_to_s3.s(),
+        save_segments_to_db.s(),
+        cleanup_files.s()
+    )
+
+    # Start the chain of tasks, no need to pass args here
+    video_processing_chain.apply_async()
 
 
 @app.task(bind=True, name="update_last_streamed_point", max_retries=1)
