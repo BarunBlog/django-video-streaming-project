@@ -1,11 +1,12 @@
 import os
 import ffmpeg
-from celery import shared_task
+from video_streaming_backend.celery import app
+from celery import states
 from celery.utils.log import get_task_logger
+from celery.exceptions import Retry, Ignore
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.db import DatabaseError
-from .models import Video, VideoSegment, LastStreamedPoint
+from .models import Video, VideoSegment
 from . import models
 import shutil
 import boto3
@@ -13,8 +14,8 @@ import boto3
 logger = get_task_logger(__name__)
 
 
-@shared_task
-def process_video(video_uuid, video_path):
+@app.task(bind=True, name="process_video")
+def process_video(self, video_uuid, video_path):
     logger.info("Start getting the video object from uuid")
 
     environment = settings.ENVIRONMENT
@@ -117,19 +118,36 @@ def process_video(video_uuid, video_path):
     return "Task Successful"
 
 
-@shared_task
-def update_last_streamed_segment(user_id: int, video_uuid: str, last_played_second: int):
-    logger.info("Start updating the last streamed segment")
+@app.task(bind=True, name="update_last_streamed_point", max_retries=1)
+def update_last_streamed_segment(self, user_id: int, video_uuid: str, last_played_second: int):
+    logger.info("Start updating the last streamed point")
+
+    # Mark the task as "Processing"
+    self.update_state(state=states.STARTED, meta={"status": "Processing"})
 
     # Get video by video_uuid
     try:
         video: Video = models.get_video_by_uuid(video_uuid=video_uuid)
     except Video.DoesNotExist as e:
-        logger.error("Video not found with the given uuid")
-        return
+        error_message = "Video not found with the given UUID."
+        logger.error(error_message)
+        self.update_state(state=states.FAILURE, meta={"status": error_message})
+        raise Ignore()  # Skip further processing
 
     # Update or create the last streamed segment
     try:
         models.save_last_streamed_point(user_id=user_id, video=video, last_played_second=last_played_second)
     except DatabaseError as e:
-        logger.error(f"Error updating last streamed segment: {e}")
+        error_message = f"Database error while updating last streamed segment: {e}"
+        logger.error(error_message)
+        self.update_state(state=states.FAILURE, meta={"status": error_message})
+
+        # Retry only for transient database issues
+        retry_in = 10
+        logger.info(f"Retrying in {retry_in} seconds...")
+        raise self.retry(exc=e, countdown=retry_in)
+
+    # Task completed successfully
+    logger.info("Last streamed point updated successfully.")
+    self.update_state(state=states.SUCCESS, meta={"status": "Completed"})
+    return {"status": "Completed", "user_id": user_id, "video_uuid": video_uuid}
