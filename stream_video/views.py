@@ -65,8 +65,7 @@ class UploadVideo(APIView):
                             destination.write(chunk)
 
                     # Call the Celery task to process the video
-                    # process_video.delay(video_uuid=str(video.uuid), video_path=video_path)
-                    process_video_func(video.uuid, video_path)
+                    process_video(video.uuid, video_path)
                     return Response({"message": "Video uploaded successfully. Processing in background."},
                                     status=status.HTTP_201_CREATED)
 

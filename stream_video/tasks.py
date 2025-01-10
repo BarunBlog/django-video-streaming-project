@@ -15,8 +15,8 @@ import boto3
 logger = get_task_logger(__name__)
 
 
-@app.task(bind=True, name="setup_and_generate_segments")
-def setup_and_generate_segments(self, video_uuid, video_path):
+@app.task(bind=True, name="setup_and_generate_segments", queue="high_priority")
+def setup_and_process_video(self, video_uuid, video_path):
     logger.info("Start creating the folder for chunk files for the video")
 
     # Mark the task as "Processing"
@@ -59,7 +59,7 @@ def setup_and_generate_segments(self, video_uuid, video_path):
     }
 
 
-@app.task(bind=True, name="extract_video_metadata")
+@app.task(bind=True, name="extract_video_metadata", queue="high_priority")
 def extract_video_metadata(self, setup_data):
     logger.info("Extracting video metadata.")
     video_path = setup_data["video_path"]
@@ -76,7 +76,7 @@ def extract_video_metadata(self, setup_data):
     return setup_data
 
 
-@app.task(bind=True, name="upload_segments_to_s3", max_retries=2)
+@app.task(bind=True, name="upload_segments_to_s3", max_retries=2, queue="medium_priority")
 def upload_segments_to_s3(self, setup_data):
     if settings.ENVIRONMENT == "production":
         logger.info("Uploading segments to S3.")
@@ -118,7 +118,7 @@ def upload_segments_to_s3(self, setup_data):
     return setup_data
 
 
-@app.task(bind=True, name="save_segments_to_db")
+@app.task(bind=True, name="save_segments_to_db", queue="low_priority")
 def save_segments_to_db(self, setup_data):
     logger.info("Saving segments data to database.")
 
@@ -144,7 +144,7 @@ def save_segments_to_db(self, setup_data):
     return setup_data
 
 
-@app.task(bind=True, name="cleanup_files")
+@app.task(bind=True, name="cleanup_files", queue="low_priority")
 def cleanup_files(self, setup_data):
     logger.info("Cleaning up temporary files.")
     video_path = setup_data["video_path"]
@@ -170,18 +170,18 @@ def cleanup_files(self, setup_data):
 def process_video(video_uuid: str, video_path: str):
     # Define the chain
     video_processing_chain = chain(
-        setup_and_generate_segments.s(video_uuid, video_path),
-        extract_video_metadata.s(),
-        upload_segments_to_s3.s(),
-        save_segments_to_db.s(),
-        cleanup_files.s()
+        setup_and_process_video.s(video_uuid, video_path).set(priority=10),  # High priority
+        extract_video_metadata.s().set(priority=8),  # Slightly lower priority
+        upload_segments_to_s3.s().set(priority=5),  # Medium priority
+        save_segments_to_db.s().set(priority=3),  # Lower priority
+        cleanup_files.s().set(priority=1)  # Lowest priority
     )
 
     # Start the chain of tasks, no need to pass args here
     video_processing_chain.apply_async()
 
 
-@app.task(bind=True, name="update_last_streamed_point", max_retries=1)
+@app.task(bind=True, name="update_last_streamed_point", max_retries=1, queue="high_priority", priority=10)
 def update_last_streamed_segment(self, user_id: int, video_uuid: str, last_played_second: int):
     logger.info("Start updating the last streamed point")
 

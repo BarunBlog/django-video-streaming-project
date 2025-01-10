@@ -216,7 +216,7 @@ CORS_ALLOW_HEADERS = ('content-type', 'accept', 'accept-encoding', 'authorizatio
 
 # Celery configurations
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND')
+CELERY_RESULT_BACKEND = 'django-db'
 
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_RESULT_SERIALIZER = 'json'
