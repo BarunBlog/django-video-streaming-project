@@ -1,9 +1,11 @@
 from django.core.exceptions import ObjectDoesNotExist
-
+import os
+from utils.presigned_urls import generate_presigned_url
 from . import models
 from rest_framework import serializers
-from .models import Video, LastStreamedPoint
+from .models import Video, LastStreamedPoint, VideoSegment
 from .validators import validate_video_file_extension
+from utils.redis.redis_helpers import get_presigned_urls, cache_presigned_urls
 
 
 class UploadVideoSerializer(serializers.ModelSerializer):
@@ -45,12 +47,13 @@ class GetVideosSerializer(serializers.ModelSerializer):
 class GetVideoDetailSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
     last_streamed_second = serializers.SerializerMethodField()
+    presigned_urls = serializers.SerializerMethodField()
 
     class Meta:
         model = Video
         fields = (
             'uuid', 'author_name', 'title', 'category', 'description', 'created_at', 'mpd_file_url',
-            'last_streamed_second'
+            'last_streamed_second', 'presigned_urls'
         )
 
     def get_author_name(self, obj):
@@ -69,3 +72,28 @@ class GetVideoDetailSerializer(serializers.ModelSerializer):
             return last_streamed_point.last_played_second
         except ObjectDoesNotExist:
             return 0
+
+    def get_presigned_urls(self, obj):
+        print("Querying presigned urls for the video segments", flush=True)
+
+        # Checking if redis has presigned urls cached for the video
+        presigned_urls = get_presigned_urls(video_uuid=obj.uuid)
+        if presigned_urls:
+            return presigned_urls
+
+        print("Generating presigned urls for the video segments", flush=True)
+
+        segments = VideoSegment.objects.filter(video__uuid=obj.uuid).values('segment_name')
+        presigned_urls = {}
+
+        for segment in segments:
+            s3_key = os.path.join('media', 'stream_video', 'chunks', str(obj.uuid), 'segments', segment["segment_name"])
+
+            presigned_urls[segment["segment_name"]] = generate_presigned_url(s3_key)
+
+        print("Caching the presigned urls into redis", flush=True)
+
+        # Caching the presigned urls into redis
+        cache_presigned_urls(video_uuid=obj.uuid, presigned_urls=presigned_urls)
+
+        return presigned_urls

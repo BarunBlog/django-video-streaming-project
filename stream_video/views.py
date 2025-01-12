@@ -3,14 +3,14 @@ import re
 import requests
 from django.conf import settings
 from rest_framework.views import APIView
-from django.http import StreamingHttpResponse, HttpResponse, FileResponse, Http404
+from django.http import StreamingHttpResponse, HttpResponse, FileResponse, Http404, JsonResponse
 from django.db import IntegrityError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from .serializers import UploadVideoSerializer
 from .tasks import update_last_streamed_segment, process_video
-from .models import Video
+from .models import Video, VideoSegment
 from .filters import VideoFilter
 from django.db import transaction
 from rest_framework import generics
@@ -19,6 +19,9 @@ from django.core.exceptions import ObjectDoesNotExist
 from django_filters import rest_framework as filters
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Key is used as the user as the api is authenticated must
@@ -106,7 +109,6 @@ class GetVideoDetail(generics.RetrieveAPIView):
 # If the limit is exceeded, the user will be blocked
 @method_decorator(ratelimit(key='user', rate='10/m', block=True), name='dispatch')
 class ServeMPDFile(APIView):
-    permission_classes = [IsAuthenticated]
 
     def get(self, request, video_uuid, *args, **kwargs):
 

@@ -214,6 +214,12 @@ CORS_ALLOW_HEADERS = ('content-type', 'accept', 'accept-encoding', 'authorizatio
 #     "PASSWORD": os.environ.get("RABBITMQ_PASSWORD", "guest"),
 # }
 
+# Redis configurations
+REDIS_HOST = os.environ.get('REDIS_HOST')
+REDIS_PORT = os.environ.get('REDIS_PORT')
+REDIS_DB = os.environ.get('REDIS_DB')
+PRESIGNED_URL_EXPIRY_TIME = 3600
+
 # Celery configurations
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = 'django-db'
