@@ -8,9 +8,9 @@ from django.db import IntegrityError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import UploadVideoSerializer
+from .serializers import UploadVideoSerializer, UpdateLastStreamedPoint
 from .tasks import update_last_streamed_segment, process_video
-from .models import Video, VideoSegment
+from .models import Video, VideoSegment, get_video_by_uuid
 from .filters import VideoFilter
 from django.db import transaction
 from rest_framework import generics
@@ -182,3 +182,28 @@ class ServeSegmentFile(APIView):
         except requests.RequestException as e:
             return Response({"message": f"Error retrieving video MPD file: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class UpdateLastStreamedPointApi(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+
+        serializer = UpdateLastStreamedPoint(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Extract validated data
+        last_played_second = serializer.validated_data['last_played_second']
+
+        # Fetch the video object dynamically using the UUID
+        video_uuid = kwargs.get('video_uuid')
+        if not video_uuid:
+            return Response({"error": "Video UUID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Saving the last streamed point for the user using celery worker
+        update_last_streamed_segment.delay(
+            user_id=request.user.id, video_uuid=video_uuid, last_played_second=last_played_second
+        )
+
+        return Response({"message": "mpd_url updated successfully."}, status=status.HTTP_200_OK)

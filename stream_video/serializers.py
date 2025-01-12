@@ -97,3 +97,15 @@ class GetVideoDetailSerializer(serializers.ModelSerializer):
         cache_presigned_urls(video_uuid=obj.uuid, presigned_urls=presigned_urls)
 
         return presigned_urls
+
+
+class UpdateLastStreamedPoint(serializers.Serializer):
+    last_played_second = serializers.IntegerField(min_value=0, required=True)
+
+    def validate_last_played_second(self, value):
+        """
+        Ensure last_played_second is a non-negative integer.
+        """
+        if value < 0:
+            raise serializers.ValidationError("last_played_second must be a non-negative integer.")
+        return value
