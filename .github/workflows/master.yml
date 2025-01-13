@@ -10,34 +10,129 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-app-server:
-    name: Deploy App Server
+  deploy-app-server-1:
+    name: Deploy App Server 1
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Configure SSH for Application Server
+      - name: Configure SSH for Bastion Host and App Server 1
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_APP_HOST }}
+          SSH_BASTION_HOST: ${{ secrets.SSH_BASTION_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_APP_HOST: ${{ secrets.SSH_APP_HOST1 }}
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/bastion_key
+          chmod 600 ~/.ssh/bastion_key
+
+          # SSH config for Bastion
+          cat >>~/.ssh/config <<END
+          Host bastion
+            HostName $SSH_BASTION_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/bastion_key
+            StrictHostKeyChecking no
+            LogLevel ERROR
+
+          Host app
+            HostName $SSH_APP_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/app_key
+            ProxyJump bastion
+            StrictHostKeyChecking no
+            LogLevel ERROR
+          END
+
+      - name: Test SSH to Bastion
+        run: ssh -T bastion echo "SSH to Bastion Server Successful"
+
+      - name: Test SSH to Bastion Server to App Server 1
+        run: ssh -T app echo "SSH to Private App Server 1 Successful"
+
+      - name: Clone Repository (if needed)
+        run: |
+          ssh app "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
+
+      - name: Set up environment variables on EC2
+        run: |
+          ssh app <<'ENDSSH'
+            cd django-video-streaming-project/
+            cat <<EOF > .env
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}
+            ENVIRONMENT=${{ secrets.ENVIRONMENT }}
+            DEBUG=${{ secrets.DEBUG }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            REDIS_DB=${{ secrets.REDIS_DB }}
+            WEB_HOST=${{ secrets.WEB_HOST }}
+            WEB_PORT=${{ secrets.WEB_PORT }}
+            EOF
+          ENDSSH
+
+      - name: Run deploy
+        run: |
+          ssh app <<'ENDSSH'
+            cd django-video-streaming-project/
+            sudo docker-compose -f compose.web.prod.yml down
+            git pull
+            sudo docker-compose -f compose.web.prod.yml build --no-cache
+            sudo docker-compose -f compose.web.prod.yml up -d --force-recreate
+          ENDSSH
+  
+
+  deploy-app-server-2:
+    name: Deploy App Server 2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure SSH for Bastion Host and App Server 2
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_BASTION_HOST: ${{ secrets.SSH_BASTION_HOST }}
+          SSH_APP_HOST: ${{ secrets.SSH_APP_HOST2 }}
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
           mkdir -p ~/.ssh/
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/github
           chmod 600 ~/.ssh/github
+          
+          # SSH config for Bastion
           cat >>~/.ssh/config <<END
-          Host target
-            HostName $SSH_HOST
+          Host bastion
+            HostName $SSH_BASTION_HOST
             User $SSH_USER
-            IdentityFile ~/.ssh/github
-            LogLevel ERROR
+            IdentityFile ~/.ssh/bastion_key
             StrictHostKeyChecking no
+            LogLevel ERROR
+
+          Host app
+            HostName $SSH_APP_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/app_key
+            ProxyJump bastion
+            StrictHostKeyChecking no
+            LogLevel ERROR
           END
 
-      - name: Test SSH Connection
-        run: |
-          ssh -T target echo "SSH connection established"
+      - name: Test SSH to Bastion
+        run: ssh -T bastion echo "SSH to Bastion Server Successful"
+
+      - name: Test SSH to Bastion Server to App Server 2
+        run: ssh -T app echo "SSH to Private App Server 2 Successful"
 
       - name: Clone Repository (if needed)
         run: |
@@ -62,6 +157,7 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             REDIS_HOST=${{ secrets.REDIS_HOST }}
             REDIS_PORT=${{ secrets.REDIS_PORT }}
+            REDIS_DB=${{ secrets.REDIS_DB }}
             WEB_HOST=${{ secrets.WEB_HOST }}
             WEB_PORT=${{ secrets.WEB_PORT }}
             EOF
@@ -78,34 +174,47 @@ jobs:
           ENDSSH
 
 
-  deploy-worker-server:
-    name: Deploy Worker Server
+
+  deploy-worker-server-1:
+    name: Deploy Worker Server 1
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Configure SSH for Worker Server
+      - name: Configure SSH for Bastion Host and Worker Server 1
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_WORKER_HOST }}
+          SSH_BASTION_HOST: ${{ secrets.SSH_BASTION_HOST }}
+          SSH_WORKER_HOST: ${{ secrets.SSH_WORKER_HOST1 }}
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
           mkdir -p ~/.ssh/
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/github
           chmod 600 ~/.ssh/github
+          
+          # SSH config for Bastion
           cat >>~/.ssh/config <<END
-          Host target
-            HostName $SSH_HOST
+          Host bastion
+            HostName $SSH_BASTION_HOST
             User $SSH_USER
-            IdentityFile ~/.ssh/github
-            LogLevel ERROR
+            IdentityFile ~/.ssh/bastion_key
             StrictHostKeyChecking no
-          END
+            LogLevel ERROR
+          
+          Host worker
+            HostName $SSH_WORKER_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/app_key
+            ProxyJump bastion
+            StrictHostKeyChecking no
+            LogLevel ERROR
 
-      - name: Test SSH Connection
-        run: |
-          ssh -T target echo "SSH connection established"
+      - name: Test SSH to Bastion
+        run: ssh -T bastion echo "SSH to Bastion Server Successful"
+
+      - name: Test SSH to Bastion Server to Worker Server 1
+        run: ssh -T app echo "SSH to Private Worker Server 1 Successful"
 
       - name: Clone Repository (if needed)
         run: |
@@ -130,12 +239,13 @@ jobs:
             DB_NAME=${{ secrets.DB_NAME }}
             REDIS_HOST=${{ secrets.REDIS_HOST }}
             REDIS_PORT=${{ secrets.REDIS_PORT }}
+            REDIS_DB=${{ secrets.REDIS_DB }}
             WEB_HOST=${{ secrets.WEB_HOST }}
             WEB_PORT=${{ secrets.WEB_PORT }}
             EOF
           ENDSSH
 
-      - name: Deploy to Worker Server
+      - name: Deploy to Worker Server 1
         run: |
           ssh target <<'ENDSSH'
             cd django-video-streaming-project/
@@ -143,4 +253,152 @@ jobs:
             git pull
             sudo docker-compose -f compose.worker.prod.yml build --no-cache
             sudo docker-compose -f compose.worker.prod.yml up -d --force-recreate
+          ENDSSH
+
+  deploy-worker-server-2:
+    name: Deploy Worker Server 2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure SSH for Bastion Host and Worker Server 2
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_BASTION_HOST: ${{ secrets.SSH_BASTION_HOST }}
+          SSH_WORKER_HOST: ${{ secrets.SSH_WORKER_HOST2 }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/github
+          chmod 600 ~/.ssh/github
+          
+          # SSH config for Bastion
+          cat >>~/.ssh/config <<END
+          Host bastion
+            HostName $SSH_BASTION_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/bastion_key
+            StrictHostKeyChecking no
+            LogLevel ERROR
+
+          Host worker
+            HostName $SSH_WORKER_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/app_key
+            ProxyJump bastion
+            StrictHostKeyChecking no
+            LogLevel ERROR
+          END
+
+      - name: Test SSH to Bastion
+        run: ssh -T bastion echo "SSH to Bastion Server Successful"
+
+      - name: Test SSH to Bastion Server to Worker Server 2
+        run: ssh -T app echo "SSH to Private Bastion Server 2 Successful"
+
+      - name: Clone Repository (if needed)
+        run: |
+          ssh target "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
+
+      - name: Set up environment variables on EC2
+        run: |
+          ssh target <<'ENDSSH'
+            cd django-video-streaming-project/
+            cat <<EOF > .env
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_S3_REGION_NAME=${{ secrets.AWS_S3_REGION_NAME }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            AWS_STORAGE_BUCKET_NAME=${{ secrets.AWS_STORAGE_BUCKET_NAME }}
+            ENVIRONMENT=${{ secrets.ENVIRONMENT }}
+            DEBUG=${{ secrets.DEBUG }}
+            SECRET_KEY=${{ secrets.SECRET_KEY }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_HOST=${{ secrets.DB_HOST }}
+            DB_PORT=${{ secrets.DB_PORT }}
+            DB_NAME=${{ secrets.DB_NAME }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            REDIS_DB=${{ secrets.REDIS_DB }}
+            WEB_HOST=${{ secrets.WEB_HOST }}
+            WEB_PORT=${{ secrets.WEB_PORT }}
+            EOF
+          ENDSSH
+
+      - name: Deploy to Worker Server 2
+        run: |
+          ssh target <<'ENDSSH'
+            cd django-video-streaming-project/
+            sudo docker-compose -f compose.worker.prod.yml down
+            git pull
+            sudo docker-compose -f compose.worker.prod.yml build --no-cache
+            sudo docker-compose -f compose.worker.prod.yml up -d --force-recreate
+          ENDSSH
+  deploy-flower-server:
+    name: Deploy Flower Server
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Configure SSH for Bastion Host and Flower Server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_BASTION_HOST: ${{ secrets.SSH_BASTION_HOST }}
+          SSH_FLOWER_HOST: ${{ secrets.SSH_FLOWER_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh/
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/github
+          chmod 600 ~/.ssh/github
+          
+          # SSH config for Bastion
+          cat >>~/.ssh/config <<END
+          Host bastion
+            HostName $SSH_BASTION_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/bastion_key
+            StrictHostKeyChecking no
+            LogLevel ERROR
+
+          Host flower
+            HostName $SSH_FLOWER_HOST
+            User $SSH_USER
+            IdentityFile ~/.ssh/app_key
+            ProxyJump bastion
+            StrictHostKeyChecking no
+            LogLevel ERROR
+          END
+
+      - name: Test SSH to Bastion
+        run: ssh -T bastion echo "SSH to Bastion Server Successful"
+
+      - name: Test SSH to Bastion Server to Worker Server
+        run: ssh -T app echo "SSH to Private Worker Server Successful"
+
+      - name: Clone Repository (if needed)
+        run: |
+          ssh target "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
+
+      - name: Set up environment variables on EC2
+        run: |
+          ssh target <<'ENDSSH'
+            cd django-video-streaming-project/
+            cat <<EOF > .env
+            FLOWER_BASIC_AUTH=${{ secrets.FLOWER_BASIC_AUTH }}
+            REDIS_HOST=${{ secrets.REDIS_HOST }}
+            REDIS_PORT=${{ secrets.REDIS_PORT }}
+            REDIS_DB=${{ secrets.REDIS_DB }}
+            EOF
+          ENDSSH
+
+      - name: Deploy to Flower Server
+        run: |
+          ssh target <<'ENDSSH'
+            cd django-video-streaming-project/
+            sudo docker-compose -f compose.flower.prod.yml down
+            git pull
+            sudo docker-compose -f compose.flower.prod.yml build --no-cache
+            sudo docker-compose -f compose.flower.prod.yml up -d --force-recreate
           ENDSSH
