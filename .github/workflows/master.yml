@@ -115,8 +115,8 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
           mkdir -p ~/.ssh/
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/github
-          chmod 600 ~/.ssh/github
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/bastion_key
+          chmod 600 ~/.ssh/bastion_key
           
           # SSH config for Bastion
           cat >>~/.ssh/config <<END
@@ -206,8 +206,8 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
           mkdir -p ~/.ssh/
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/github
-          chmod 600 ~/.ssh/github
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/bastion_key
+          chmod 600 ~/.ssh/bastion_key
           
           # SSH config for Bastion
           cat >>~/.ssh/config <<END
@@ -294,8 +294,8 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
           mkdir -p ~/.ssh/
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/github
-          chmod 600 ~/.ssh/github
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/bastion_key
+          chmod 600 ~/.ssh/bastion_key
           
           # SSH config for Bastion
           cat >>~/.ssh/config <<END
@@ -383,8 +383,8 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
         run: |
           mkdir -p ~/.ssh/
-          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/github
-          chmod 600 ~/.ssh/github
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/bastion_key
+          chmod 600 ~/.ssh/bastion_key
           
           # SSH config for Bastion
           cat >>~/.ssh/config <<END
