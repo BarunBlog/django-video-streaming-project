@@ -28,14 +28,14 @@ jobs:
           echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/bastion_key
           chmod 600 ~/.ssh/bastion_key
 
-          # SSH config for Bastion and Private App Server
+          # SSH config for Bastion
           cat >>~/.ssh/config <<END
           Host bastion
             HostName $SSH_BASTION_HOST
             User $SSH_USER
-            IdentityFile ~/.ssh/id_rsa
-            ForwardAgent yes
+            IdentityFile ~/.ssh/bastion_key
             StrictHostKeyChecking no
+            LogLevel ERROR
 
           Host app
             HostName $SSH_APP_HOST
