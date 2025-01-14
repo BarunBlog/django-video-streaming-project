@@ -40,11 +40,19 @@ jobs:
           Host app
             HostName $SSH_APP_HOST
             User $SSH_USER
-            IdentityFile ~/.ssh/app_key
+            IdentityFile ~/.ssh/bastion_key
             ProxyJump bastion
             StrictHostKeyChecking no
             LogLevel ERROR
           END
+
+      - name: Add SSH Key to Agent
+        run: |
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/bastion_key
+
+      - name: Debug SSH Connection
+        run: ssh -vvv -T app echo "Debugging SSH Connection"
 
       - name: Test SSH to Bastion
         run: ssh -T bastion echo "SSH to Bastion Server Successful"
@@ -91,7 +99,7 @@ jobs:
             sudo docker-compose -f compose.web.prod.yml up -d --force-recreate
           ENDSSH
   
-
+  
   deploy-app-server-2:
     name: Deploy App Server 2
     runs-on: ubuntu-latest
