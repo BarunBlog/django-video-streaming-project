@@ -232,7 +232,7 @@ jobs:
           ssh-add ~/.ssh/bastion_key
 
       - name: Debug SSH Connection
-        run: ssh -vvv -T app echo "Debugging SSH Connection"
+        run: ssh -vvv -T worker echo "Debugging SSH Connection"
 
       - name: Test SSH to Bastion
         run: ssh -T bastion echo "SSH to Bastion Server Successful"
@@ -321,7 +321,7 @@ jobs:
           ssh-add ~/.ssh/bastion_key
 
       - name: Debug SSH Connection
-        run: ssh -vvv -T app echo "Debugging SSH Connection"
+        run: ssh -vvv -T worker echo "Debugging SSH Connection"
 
       - name: Test SSH to Bastion
         run: ssh -T bastion echo "SSH to Bastion Server Successful"
@@ -410,7 +410,7 @@ jobs:
           ssh-add ~/.ssh/bastion_key
 
       - name: Debug SSH Connection
-        run: ssh -vvv -T app echo "Debugging SSH Connection"
+        run: ssh -vvv -T flower echo "Debugging SSH Connection"
 
       - name: Test SSH to Bastion
         run: ssh -T bastion echo "SSH to Bastion Server Successful"
