@@ -152,7 +152,7 @@ jobs:
 
       - name: Clone Repository (if needed)
         run: |
-          ssh target "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
+          ssh app "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
 
       - name: Set up environment variables on EC2
         run: |
@@ -242,7 +242,7 @@ jobs:
 
       - name: Clone Repository (if needed)
         run: |
-          ssh target "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
+          ssh worker "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
 
       - name: Set up environment variables on EC2
         run: |
@@ -331,7 +331,7 @@ jobs:
 
       - name: Clone Repository (if needed)
         run: |
-          ssh target "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
+          ssh worker "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
 
       - name: Set up environment variables on EC2
         run: |
@@ -420,7 +420,7 @@ jobs:
 
       - name: Clone Repository (if needed)
         run: |
-          ssh target "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
+          ssh flower "if [ ! -d 'django-video-streaming-project' ]; then git clone https://github.com/BarunBlog/django-video-streaming-project.git; fi"
 
       - name: Set up environment variables on EC2
         run: |
