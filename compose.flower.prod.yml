@@ -1,7 +1,7 @@
 services:
   flower:
     image: mher/flower:latest
-    command: celery --broker=redis://${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB} flower --port=5000
+    command: celery --broker=redis://${REDIS_HOST}:${REDIS_PORT}/${REDIS_DB} flower --port=5000 --address=0.0.0.0
     environment:
       - FLOWER_BASIC_AUTH=${FLOWER_BASIC_AUTH}
       - REDIS_HOST=${REDIS_HOST}
