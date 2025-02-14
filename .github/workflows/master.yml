@@ -95,6 +95,7 @@ jobs:
             cd django-video-streaming-project/
             sudo docker-compose -f compose.web.prod.yml down
             git pull
+            bash mount_nfs.sh
             sudo docker-compose -f compose.web.prod.yml build --no-cache
             sudo docker-compose -f compose.web.prod.yml up -d --force-recreate
           ENDSSH
@@ -185,6 +186,7 @@ jobs:
             cd django-video-streaming-project/
             sudo docker-compose -f compose.web.prod.yml down
             git pull
+            bash mount_nfs.sh
             sudo docker-compose -f compose.web.prod.yml build --no-cache
             sudo docker-compose -f compose.web.prod.yml up -d --force-recreate
           ENDSSH
@@ -275,6 +277,7 @@ jobs:
             cd django-video-streaming-project/
             sudo docker-compose -f compose.worker.prod.yml down
             git pull
+            bash mount_nfs.sh
             sudo docker-compose -f compose.worker.prod.yml build --no-cache
             sudo docker-compose -f compose.worker.prod.yml up -d --force-recreate
           ENDSSH
@@ -364,6 +367,7 @@ jobs:
             cd django-video-streaming-project/
             sudo docker-compose -f compose.worker.prod.yml down
             git pull
+            bash mount_nfs.sh
             sudo docker-compose -f compose.worker.prod.yml build --no-cache
             sudo docker-compose -f compose.worker.prod.yml up -d --force-recreate
           ENDSSH
