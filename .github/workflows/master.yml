@@ -86,6 +86,7 @@ jobs:
             REDIS_DB=${{ secrets.REDIS_DB }}
             WEB_HOST=${{ secrets.WEB_HOST }}
             WEB_PORT=${{ secrets.WEB_PORT }}
+            NFS_STORAGE_HOST=${{ secrets.NFS_STORAGE_HOST }}
             EOF
           ENDSSH
 
@@ -177,6 +178,7 @@ jobs:
             REDIS_DB=${{ secrets.REDIS_DB }}
             WEB_HOST=${{ secrets.WEB_HOST }}
             WEB_PORT=${{ secrets.WEB_PORT }}
+            NFS_STORAGE_HOST=${{ secrets.NFS_STORAGE_HOST }}
             EOF
           ENDSSH
 
@@ -268,6 +270,7 @@ jobs:
             REDIS_DB=${{ secrets.REDIS_DB }}
             WEB_HOST=${{ secrets.WEB_HOST }}
             WEB_PORT=${{ secrets.WEB_PORT }}
+            NFS_STORAGE_HOST=${{ secrets.NFS_STORAGE_HOST }}
             EOF
           ENDSSH
 
@@ -358,6 +361,7 @@ jobs:
             REDIS_DB=${{ secrets.REDIS_DB }}
             WEB_HOST=${{ secrets.WEB_HOST }}
             WEB_PORT=${{ secrets.WEB_PORT }}
+            NFS_STORAGE_HOST=${{ secrets.NFS_STORAGE_HOST }}
             EOF
           ENDSSH
 
