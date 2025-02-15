@@ -1,12 +1,14 @@
 #!/bin/bash
 
-# Load environment variables
-source /etc/environment  # OR source ~/.bashrc (depending on where you define $NFS_STORAGE_HOST)
+# Load environment variables from .env
+if [ -f .env ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
 
 # Ensure the variable is loaded
 if [ -z "$NFS_STORAGE_HOST" ]; then
-  echo "Error: NFS_STORAGE_HOST is not set!"
-  exit 1
+    echo "Error: NFS_STORAGE_HOST is not set!"
+    exit 1
 fi
 
 # Install NFS client
@@ -20,7 +22,7 @@ sudo mount -t nfs $NFS_STORAGE_HOST:/mnt/shared_storage /mnt/shared_storage
 
 # Make it permanent (add to /etc/fstab) if it's not already there
 if ! grep -q "$NFS_STORAGE_HOST:/mnt/shared_storage" /etc/fstab; then
-  echo "$NFS_STORAGE_HOST:/mnt/shared_storage /mnt/shared_storage nfs defaults 0 0" | sudo tee -a /etc/fstab
+    echo "$NFS_STORAGE_HOST:/mnt/shared_storage /mnt/shared_storage nfs defaults 0 0" | sudo tee -a /etc/fstab
 fi
 
 echo "NFS mount completed successfully!"
