@@ -22,7 +22,13 @@ def setup_and_process_video(self, video_uuid, video_path):
     # Mark the task as "Processing"
     self.update_state(state=states.STARTED, meta={"status": "Processing"})
 
-    segments_path = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'chunks', str(video_uuid), 'segments')
+    # Determine storage directory (NFS in production, local in other environments)
+    if settings.ENVIRONMENT == "production":
+        base_storage_path = settings.NFS_ROOT_URL + 'stream_video/chunks'
+    else:
+        base_storage_path = settings.MEDIA_ROOT + 'stream_video/chunks'
+
+    segments_path = os.path.join(base_storage_path, str(video_uuid), 'segments')
     os.makedirs(segments_path, exist_ok=True)
 
     logger.info("Generating segments and MPD file.")
@@ -127,15 +133,13 @@ def save_segments_to_db(self, setup_data):
 
     video = Video.objects.get(uuid=setup_data["video_uuid"])
     segments_path = setup_data["segments_path"]
-    video_uuid = setup_data["video_uuid"]
 
     for root, dirs, files in os.walk(segments_path):
         for file in files:
-            segment_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments', file)
+            segment_url = os.path.join(segments_path, file)
             VideoSegment.objects.create(video=video, segment_name=file, segment_url=segment_url)
 
-    video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid), 'segments',
-                                      'manifest.mpd')
+    video.mpd_file_url = os.path.join(segments_path, 'manifest.mpd')
     video.duration = setup_data.get("duration", 0)
     video.save()
 
@@ -148,7 +152,14 @@ def save_segments_to_db(self, setup_data):
 def cleanup_files(self, setup_data):
     logger.info("Cleaning up temporary files.")
     video_path = setup_data["video_path"]
-    segments_parent_path = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'chunks', str(setup_data["video_uuid"]))
+
+    # Determine storage directory (NFS in production, local in other environments)
+    if settings.ENVIRONMENT == "production":
+        base_storage_path = settings.NFS_ROOT_URL
+    else:
+        base_storage_path = settings.MEDIA_ROOT
+
+    segments_parent_path = os.path.join(base_storage_path, 'stream_video', 'chunks', str(setup_data["video_uuid"]))
     environment = settings.ENVIRONMENT
 
     if environment == "production":

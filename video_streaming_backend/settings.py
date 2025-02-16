@@ -270,3 +270,6 @@ if ENVIRONMENT == "production":
     # Media files settings
     MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
     DEFAULT_FILE_STORAGE = 'video_streaming_backend.storages.MediaStorage'
+
+    # NFS Root directory
+    NFS_ROOT_URL = '/mnt/shared_storage/'

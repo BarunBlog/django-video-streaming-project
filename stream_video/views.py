@@ -55,8 +55,14 @@ class UploadVideo(APIView):
                         thumbnail=thumbnail,
                     )
 
+                    # Determine storage directory (NFS in production, local in other environments)
+                    if settings.ENVIRONMENT == "production":
+                        base_storage_path = settings.NFS_ROOT_URL + 'stream_video/videos'
+                    else:
+                        base_storage_path = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'videos')
+
                     # Create the directory for saving the video if it doesn't exist
-                    video_directory = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'videos', str(video.uuid))
+                    video_directory = os.path.join(base_storage_path, str(video.uuid))
                     os.makedirs(video_directory, exist_ok=True)
 
                     # Define the full path for the video file
