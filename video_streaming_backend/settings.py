@@ -271,5 +271,6 @@ if ENVIRONMENT == "production":
     MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
     DEFAULT_FILE_STORAGE = 'video_streaming_backend.storages.MediaStorage'
 
+elif ENVIRONMENT == "staging":
     # NFS Root directory
     NFS_ROOT_URL = '/mnt/shared_storage/'

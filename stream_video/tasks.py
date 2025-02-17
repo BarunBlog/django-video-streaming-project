@@ -35,7 +35,7 @@ def setup_and_process_video(self, video_uuid, video_path):
     self.update_state(state=states.STARTED, meta={"status": "Processing"})
 
     # Determine storage directory (NFS in production, local in other environments)
-    if settings.ENVIRONMENT == "production":
+    if settings.ENVIRONMENT == "staging":
         base_storage_path = settings.NFS_ROOT_URL + 'stream_video/chunks'
     else:
         base_storage_path = settings.MEDIA_ROOT + 'stream_video/chunks'
@@ -166,7 +166,7 @@ def cleanup_files(self, setup_data):
     video_path = setup_data["video_path"]
 
     # Determine storage directory (NFS in production, local in other environments)
-    if settings.ENVIRONMENT == "production":
+    if settings.ENVIRONMENT == "staging":
         base_storage_path = settings.NFS_ROOT_URL
     else:
         base_storage_path = settings.MEDIA_ROOT
@@ -174,7 +174,7 @@ def cleanup_files(self, setup_data):
     segments_parent_path = os.path.join(base_storage_path, 'stream_video', 'chunks', str(setup_data["video_uuid"]))
     environment = settings.ENVIRONMENT
 
-    if environment == "production":
+    if environment == "production" or environment == "staging":
         shutil.rmtree(os.path.dirname(segments_parent_path), ignore_errors=True)
         logger.info("Deleted the video segment files")
 

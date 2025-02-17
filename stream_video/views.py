@@ -56,7 +56,7 @@ class UploadVideo(APIView):
                     )
 
                     # Determine storage directory (NFS in production, local in other environments)
-                    if settings.ENVIRONMENT == "production":
+                    if settings.ENVIRONMENT == "staging":
                         base_storage_path = settings.NFS_ROOT_URL + 'stream_video/videos'
                     else:
                         base_storage_path = os.path.join(settings.MEDIA_ROOT, 'stream_video', 'videos')
