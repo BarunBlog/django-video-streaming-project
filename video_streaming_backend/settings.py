@@ -274,3 +274,4 @@ if ENVIRONMENT == "production":
 elif ENVIRONMENT == "staging":
     # NFS Root directory
     NFS_ROOT_URL = '/mnt/shared_storage/'
+    MEDIA_ROOT = NFS_ROOT_URL
