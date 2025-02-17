@@ -17,6 +17,18 @@ logger = get_task_logger(__name__)
 
 @app.task(bind=True, name="setup_and_generate_segments", queue="high_priority")
 def setup_and_process_video(self, video_uuid, video_path):
+    logger.info("Checking if the video file is accessible from the worker")
+
+    # Check if file exists
+    if not os.path.exists(video_path):
+        logger.error(f"Video file not found at {video_path}")
+        raise FileNotFoundError(f"Video file not found: {video_path}")
+
+    # Check if file is readable
+    if not os.access(video_path, os.R_OK):
+        logger.error(f"Permission denied: Cannot read video file at {video_path}")
+        raise PermissionError(f"Permission denied: Cannot read video file at {video_path}")
+
     logger.info("Start creating the folder for chunk files for the video")
 
     # Mark the task as "Processing"
