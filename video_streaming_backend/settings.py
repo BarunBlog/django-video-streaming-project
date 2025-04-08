@@ -180,7 +180,7 @@ USE_TZ = True
 
 # To store user uploaded files into media folder
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = '/mnt/shared_storage/'
 
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
@@ -273,5 +273,4 @@ if ENVIRONMENT == "production":
 
 elif ENVIRONMENT == "staging":
     # NFS Root directory
-    NFS_ROOT_URL = '/mnt/shared_storage/'
-    MEDIA_ROOT = NFS_ROOT_URL
+    MEDIA_ROOT = '/mnt/shared_storage/'
