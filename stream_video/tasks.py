@@ -92,42 +92,41 @@ def extract_video_metadata(self, setup_data):
 
 @app.task(bind=True, name="upload_segments_to_s3", max_retries=2, queue="medium_priority")
 def upload_segments_to_s3(self, setup_data):
-    if settings.ENVIRONMENT == "production":
-        logger.info("Uploading segments to S3.")
+    logger.info("Uploading segments to S3.")
 
-        self.update_state(state=states.STARTED, meta={"status": "Processing"})
+    self.update_state(state=states.STARTED, meta={"status": "Processing"})
 
-        s3_client = boto3.client('s3')
-        bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-        segments_path = setup_data["segments_path"]
-        video_uuid = setup_data["video_uuid"]
+    s3_client = boto3.client('s3')
+    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+    segments_path = setup_data["segments_path"]
+    video_uuid = setup_data["video_uuid"]
 
-        for root, dirs, files in os.walk(segments_path):
-            for file in files:
-                local_file_path = os.path.join(root, file)
-                s3_key = os.path.join('media', 'stream_video', 'chunks', str(video_uuid), 'segments', file)
+    for root, dirs, files in os.walk(segments_path):
+        for file in files:
+            local_file_path = os.path.join(root, file)
+            s3_key = os.path.join('media', 'stream_video', 'chunks', str(video_uuid), 'segments', file)
 
+            try:
+                logger.info(f"Uploading {file} to S3...")
+                s3_client.upload_file(local_file_path, bucket_name, s3_key)
+                logger.info(f"Uploaded {file} successfully.")
+            except (BotoCoreError, NoCredentialsError) as e:
+                logger.error(f"Error uploading {file} to S3: {e}")
+
+                # Retry the task
                 try:
-                    logger.info(f"Uploading {file} to S3...")
-                    s3_client.upload_file(local_file_path, bucket_name, s3_key)
-                    logger.info(f"Uploaded {file} successfully.")
-                except (BotoCoreError, NoCredentialsError) as e:
-                    logger.error(f"Error uploading {file} to S3: {e}")
-
-                    # Retry the task
-                    try:
-                        raise self.retry(
-                            countdown=5,  # Retry after 5 seconds
-                            exc=e,
-                            max_retries=self.max_retries  # Maximum retries
-                        )
-                    except MaxRetriesExceededError:
-                        logger.error(f"Maximum retries exceeded for {file}.")
-                        self.update_state(
-                            state=states.FAILURE,
-                            meta={"status": f"Failed to upload {file} after {self.max_retries} retries."}
-                        )
-                        raise Retry(f"Max retries reached for {file}.")
+                    raise self.retry(
+                        countdown=5,  # Retry after 5 seconds
+                        exc=e,
+                        max_retries=self.max_retries  # Maximum retries
+                    )
+                except MaxRetriesExceededError:
+                    logger.error(f"Maximum retries exceeded for {file}.")
+                    self.update_state(
+                        state=states.FAILURE,
+                        meta={"status": f"Failed to upload {file} after {self.max_retries} retries."}
+                    )
+                    raise Retry(f"Max retries reached for {file}.")
 
     return setup_data
 
@@ -166,9 +165,8 @@ def cleanup_files(self, setup_data):
     segments_parent_path = os.path.join(base_storage_path, 'stream_video', 'chunks', str(setup_data["video_uuid"]))
     environment = settings.ENVIRONMENT
 
-    if environment == "production" or environment == "staging":
-        shutil.rmtree(os.path.dirname(segments_parent_path), ignore_errors=True)
-        logger.info("Deleted the video segment files")
+    shutil.rmtree(os.path.dirname(segments_parent_path), ignore_errors=True)
+    logger.info("Deleted the video segment files")
 
     # Clean up the temporary video file
     os.remove(video_path)
