@@ -68,8 +68,8 @@ services:
       - "80:80" # External port 80 to internal port 80 of nginx
     volumes:
       - ./nginx.conf:/etc/nginx/conf.d/default.conf  # Mount the custom Nginx config file into docker
-      - ~/nfs_shared_storage:/app/media # Mount the static files into NGINX
-      - ./media:/app/media # Mount the media files into NGINX
+      - ~/nfs_shared_storage:/app/media # Mount the NFS media files into NGINX
+      - static_volume:/app/static  # Mount the static files into NGINX
     depends_on:
       - web
     networks:
