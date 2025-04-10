@@ -146,7 +146,10 @@ def save_segments_to_db(self, setup_data):
             segment_url = os.path.join(segments_path, file)
             VideoSegment.objects.create(video=video, segment_name=file, segment_url=segment_url)
 
-    video.mpd_file_url = os.path.join(segments_path, 'manifest.mpd')
+    # Saving the mpd url of the s3 bucket
+    video.mpd_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(setup_data["video_uuid"]),
+                                      'segments', 'manifest.mpd')
+
     video.duration = setup_data.get("duration", 0)
     video.save()
 

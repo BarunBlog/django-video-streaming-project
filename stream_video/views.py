@@ -123,15 +123,9 @@ class ServeMPDFile(APIView):
         if not video.mpd_file_url:
             return Response({"message": "Video mpd file url not found"}, status=status.HTTP_404_NOT_FOUND)
 
-        environment = settings.ENVIRONMENT
-
         try:
-            mpd_file_url = video.mpd_file_url
 
-            if environment == "development":
-                mpd_file_url = "http://backend-nginx-1:80" + mpd_file_url
-
-            response = requests.get(mpd_file_url, stream=True)
+            response = requests.get(video.mpd_file_url, stream=True)
 
             if response.status_code == 200:
                 return HttpResponse(response.content, content_type='application/dash+xml')

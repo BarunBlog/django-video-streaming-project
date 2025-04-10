@@ -14,6 +14,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     networks:
+      - backend-network
       - app-network
 
   # redis
@@ -60,6 +61,7 @@ services:
       - AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
       - AWS_S3_REGION_NAME=${AWS_S3_REGION_NAME}
     networks:
+      - backend-network
       - app-network
       - redis-network  # Connect the web service to both networks
     depends_on:
@@ -99,6 +101,7 @@ services:
       - .:/app
       - ~/nfs_shared_storage:/mnt/shared_storage
     networks:
+      - backend-network
       - worker-network
       - redis-network # Connect the worker to both networks
 
@@ -122,19 +125,22 @@ services:
       - .:/app
       - ~/nfs_shared_storage:/mnt/shared_storage
     networks:
+      - backend-network
       - worker-network
       - redis-network # Connect the worker to both networks
 
 
 networks:
+  backend-network:
+
   app-network:
-    driver: bridge
+
   worker-network:
-    driver: bridge
+
   redis-network:
-    driver: bridge
+
   flower-network:
-    driver: bridge
+
 volumes:
   postgres-db:
   static_volume:
