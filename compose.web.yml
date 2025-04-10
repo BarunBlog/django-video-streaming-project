@@ -28,6 +28,9 @@ services:
 
   # Web server
   web:
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     build:
       context: .
       dockerfile: Dockerfile.web
