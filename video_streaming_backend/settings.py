@@ -179,10 +179,10 @@ USE_I18N = True
 USE_TZ = True
 
 # To store user uploaded files into media folder
-MEDIA_URL = '/media/'
 MEDIA_ROOT = '/mnt/shared_storage/'
+# MEDIA_URL = '/media/'
 
-STATIC_URL = 'static/'
+# STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 # Default primary key field type
@@ -251,26 +251,22 @@ LOGGING = {
     },
 }
 
-if ENVIRONMENT == "production":
-    # S3 bucket configuration
-    AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
-    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
-    AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
-    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+# S3 bucket configuration
+# S3 bucket is required in all environments
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME')
+AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
 
-    # S3 bucket Optional settings
-    AWS_S3_FILE_OVERWRITE = False
-    AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
+# S3 bucket Optional settings
+AWS_S3_FILE_OVERWRITE = False
+AWS_S3_OBJECT_PARAMETERS = {'CacheControl': 'max-age=86400'}
 
-    # S3 static settings
-    STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
-    STATICFILES_STORAGE = 'video_streaming_backend.storages.StaticStorage'
+# S3 static settings
+STATIC_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/static/'
+STATICFILES_STORAGE = 'video_streaming_backend.storages.StaticStorage'
 
-    # Media files settings
-    MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
-    DEFAULT_FILE_STORAGE = 'video_streaming_backend.storages.MediaStorage'
-
-elif ENVIRONMENT == "staging":
-    # NFS Root directory
-    MEDIA_ROOT = '/mnt/shared_storage/'
+# Media files settings
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/media/'
+DEFAULT_FILE_STORAGE = 'video_streaming_backend.storages.MediaStorage'
