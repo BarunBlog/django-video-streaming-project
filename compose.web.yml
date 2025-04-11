@@ -5,7 +5,7 @@ services:
     image: postgres:latest
     container_name: video-streaming-db
     volumes:
-      - postgres-db:/data/postgres
+      - postgres-db:/var/lib/postgresql/data
     restart: unless-stopped
     ports:
       - "5430:5432" # host port : internal service port
