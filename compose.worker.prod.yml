@@ -19,6 +19,7 @@ services:
     command: sh ./run_celery.sh
     volumes:
       - .:/app
+      - /mnt/shared_storage:/mnt/shared_storage
 
 networks:
   worker-network:
