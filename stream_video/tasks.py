@@ -11,6 +11,7 @@ from .models import Video, VideoSegment
 from . import models
 import shutil
 import boto3
+import subprocess
 
 logger = get_task_logger(__name__)
 
@@ -39,31 +40,54 @@ def setup_and_process_video(self, video_uuid, video_path):
     segments_path = os.path.join(base_storage_path, str(video_uuid), 'segments')
     os.makedirs(segments_path, exist_ok=True)
 
-    logger.info("Generating segments and MPD file.")
-
     mpd_path = os.path.join(segments_path, 'manifest.mpd')
 
+    logger.info("Generating multi-resolution DASH segments and MPD file")
+
+    """
+        init-stream1.m4s initialization segments for 480p
+        init-stream2.m4s initialization segments for 720p
+        init-stream3.m4s initialization segments for 1080p
+
+        chunk-stream1-00001.m4s media segments (chunks) for 480p
+        chunk-stream2-00001.m4s media segments (chunks) for 720p
+        chunk-stream3-00001.m4s media segments (chunks) for 1080p
+    """
+    
+    command = [
+        'ffmpeg',
+        '-i', video_path,
+        '-filter_complex',
+        '[0:v]split=3[v1][v2][v3];'
+        '[v1]scale=w=854:h=480[vout1];'
+        '[v2]scale=w=1280:h=720[vout2];'
+        '[v3]scale=w=1920:h=1080[vout3]',
+        '-map', '[vout1]',
+        '-map', '[vout2]',
+        '-map', '[vout3]',
+        '-map', '0:a?',
+        '-c:v', 'libx264',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-f', 'dash',
+        '-use_template', '1',
+        '-use_timeline', '1',
+        '-init_seg_name', 'init-stream$RepresentationID$.m4s',
+        '-media_seg_name', 'chunk-stream$RepresentationID$-$Number%05d$.m4s',
+        '-seg_duration', '4',
+        '-adaptation_sets', 'id=0,streams=v id=1,streams=a',
+        mpd_path
+    ]
+
     try:
-        (
-            ffmpeg
-            .input(video_path)
-            .output(mpd_path,
-                    format='dash',
-                    map='0',
-                    video_bitrate='2400k',
-                    video_size='1920x1080',
-                    vcodec='libx264',
-                    seg_duration='4',
-                    acodec='copy')
-            .run()
-        )
-    except ffmpeg.Error as e:
+        subprocess.run(command, check=True)
+    except subprocess.CalledProcessError as e:
         error_message = f"Error during segment generation: {e}"
         logger.error(error_message)
         self.update_state(state=states.FAILURE, meta={"status": error_message})
         raise Ignore()
 
-    logger.info("Successfully generated the video segment files")
+    logger.info("Successfully generated DASH multi-resolution segment files")
     self.update_state(state=states.SUCCESS, meta={"status": "Completed"})
 
     return {
