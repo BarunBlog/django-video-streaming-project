@@ -45,15 +45,15 @@ def setup_and_process_video(self, video_uuid, video_path):
     logger.info("Generating multi-resolution DASH segments and MPD file")
 
     """
-        init-stream1.m4s initialization segments for 480p
-        init-stream2.m4s initialization segments for 720p
-        init-stream3.m4s initialization segments for 1080p
+        init-stream0.m4s initialization segments for 480p
+        init-stream1.m4s initialization segments for 720p
+        init-stream2.m4s initialization segments for 1080p
 
-        chunk-stream1-00001.m4s media segments (chunks) for 480p
-        chunk-stream2-00001.m4s media segments (chunks) for 720p
-        chunk-stream3-00001.m4s media segments (chunks) for 1080p
+        chunk-stream0-00001.m4s media segments (chunks) for 480p
+        chunk-stream1-00001.m4s media segments (chunks) for 720p
+        chunk-stream2-00001.m4s media segments (chunks) for 1080p
     """
-    
+
     command = [
         'ffmpeg',
         '-i', video_path,
@@ -190,7 +190,6 @@ def cleanup_files(self, setup_data):
     base_storage_path = settings.MEDIA_ROOT
 
     segments_parent_path = os.path.join(base_storage_path, 'stream_video', 'chunks', str(setup_data["video_uuid"]))
-    environment = settings.ENVIRONMENT
 
     shutil.rmtree(os.path.dirname(segments_parent_path), ignore_errors=True)
     logger.info("Deleted the video segment files")

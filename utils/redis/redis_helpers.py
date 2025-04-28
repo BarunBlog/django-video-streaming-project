@@ -8,7 +8,7 @@ def cache_presigned_urls(video_uuid: str, presigned_urls: dict, ttl: int = setti
     """
 
     redis_key = f"presigned_urls:{video_uuid}"
-    redis_client.hmset(redis_key, presigned_urls)
+    redis_client.hset(redis_key, mapping=presigned_urls)
     redis_client.expire(redis_key, ttl)
 
 

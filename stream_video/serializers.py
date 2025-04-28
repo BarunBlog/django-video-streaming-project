@@ -79,6 +79,7 @@ class GetVideoDetailSerializer(serializers.ModelSerializer):
         # Checking if redis has presigned urls cached for the video
         presigned_urls = get_presigned_urls(video_uuid=obj.uuid)
         if presigned_urls:
+            print("Find presigned urls in the redis server", flush=True)
             return presigned_urls
 
         print("Generating presigned urls for the video segments", flush=True)
