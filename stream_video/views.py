@@ -8,7 +8,7 @@ from django.db import IntegrityError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
-from .serializers import UploadVideoSerializer, UpdateLastStreamedPoint
+from .serializers import UploadVideoSerializer, UpdateLastStreamedPoint, SegmentActivitySerializer
 from .tasks import update_last_streamed_segment, process_video
 from .models import Video, VideoSegment, get_video_by_uuid
 from .filters import VideoFilter
@@ -203,3 +203,17 @@ class UpdateLastStreamedPointApi(APIView):
         )
 
         return Response({"message": "mpd_url updated successfully."}, status=status.HTTP_200_OK)
+
+
+class SegmentActivityApi(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = SegmentActivitySerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        video_uuid = serializer.validated_data['video_uuid']
+        segments = serializer.validated_data['segments']
+
+        return Response({"message": "Segment activity updated"}, status=status.HTTP_200_OK)

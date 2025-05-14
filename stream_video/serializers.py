@@ -110,3 +110,10 @@ class UpdateLastStreamedPoint(serializers.Serializer):
         if value < 0:
             raise serializers.ValidationError("last_played_second must be a non-negative integer.")
         return value
+
+
+class SegmentActivitySerializer(serializers.Serializer):
+    video_uuid = serializers.UUIDField()
+    segments = serializers.ListField(
+        child=serializers.CharField(), allow_empty=False
+    )

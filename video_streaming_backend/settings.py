@@ -235,6 +235,8 @@ CELERY_RESULT_EXTENDED = True
 # Rate limit view
 RATELIMIT_VIEW = 'rate_limit.views.ratelimit_view'
 
+SEGMENT_ACTIVITY_EXPIRY = 3600  # 1 hour
+
 print(f"The environment is {ENVIRONMENT}", flush=True)
 
 LOGGING = {

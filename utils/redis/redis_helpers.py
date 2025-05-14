@@ -18,3 +18,14 @@ def get_presigned_urls(video_uuid: str) -> dict:
     """
     redis_key = f"presigned_urls:{video_uuid}"
     return redis_client.hgetall(redis_key)
+
+
+def increment_segment_activity(video_uuid: str, segment_names: list[str]):
+    redis_key = f"segment_activity:{video_uuid}"
+
+    pipe = redis_client.pipeline()
+    for segment in segment_names:
+        pipe.hincrby(redis_key, segment, 1)
+
+    pipe.expire(redis_key, settings.SEGMENT_ACTIVITY_EXPIRY)
+    pipe.execute()
