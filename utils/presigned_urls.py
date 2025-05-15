@@ -3,7 +3,7 @@ from botocore.exceptions import NoCredentialsError, ClientError
 from django.conf import settings
 
 
-def generate_presigned_url(s3_key, expiration=settings.PRESIGNED_URL_EXPIRY_TIME):
+def generate_presigned_url(s3_key, expiration=settings.PRESIGNED_URL_EXPIRY_TIME) -> str:
     s3_client = boto3.client(
         's3',
         region_name=settings.AWS_S3_REGION_NAME,

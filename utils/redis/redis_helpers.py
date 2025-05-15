@@ -1,3 +1,4 @@
+import json
 from utils.redis.redis_config import redis_client
 from django.conf import settings
 
@@ -8,7 +9,13 @@ def cache_presigned_urls(video_uuid: str, presigned_urls: dict, ttl: int = setti
     """
 
     redis_key = f"presigned_urls:{video_uuid}"
-    redis_client.hset(redis_key, mapping=presigned_urls)
+
+    # Serialize nested dict values to JSON strings
+    serialized_mapping = {
+        key: json.dumps(value) for key, value in presigned_urls.items()
+    }
+
+    redis_client.hset(redis_key, mapping=serialized_mapping)
     redis_client.expire(redis_key, ttl)
 
 
@@ -17,7 +24,15 @@ def get_presigned_urls(video_uuid: str) -> dict:
     Fetch presigned URLs for a video from Redis.
     """
     redis_key = f"presigned_urls:{video_uuid}"
-    return redis_client.hgetall(redis_key)
+
+    raw_data = redis_client.hgetall(redis_key)
+
+    # Deserialize JSON string back to nested dict
+    presigned_urls = {
+        key: json.loads(value) for key, value in raw_data.items()
+    }
+
+    return presigned_urls
 
 
 def increment_segment_activity(video_uuid: str, segment_names: list[str]):

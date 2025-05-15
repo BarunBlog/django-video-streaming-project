@@ -89,8 +89,12 @@ class GetVideoDetailSerializer(serializers.ModelSerializer):
 
         for segment in segments:
             s3_key = os.path.join('media', 'stream_video', 'chunks', str(obj.uuid), 'segments', segment["segment_name"])
+            presigned_url = generate_presigned_url(s3_key)
 
-            presigned_urls[segment["segment_name"]] = generate_presigned_url(s3_key)
+            presigned_urls[segment["segment_name"]] = {
+                "is_cached": "false",
+                "url": presigned_url
+            }
 
         print("Caching the presigned urls into redis", flush=True)
 
