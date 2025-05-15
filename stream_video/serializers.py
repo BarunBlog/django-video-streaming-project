@@ -113,7 +113,6 @@ class UpdateLastStreamedPoint(serializers.Serializer):
 
 
 class SegmentActivitySerializer(serializers.Serializer):
-    video_uuid = serializers.UUIDField()
     segments = serializers.ListField(
         child=serializers.CharField(), allow_empty=False
     )

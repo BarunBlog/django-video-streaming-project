@@ -23,6 +23,10 @@ def get_presigned_urls(video_uuid: str) -> dict:
 def increment_segment_activity(video_uuid: str, segment_names: list[str]):
     redis_key = f"segment_activity:{video_uuid}"
 
+    """
+    A Redis pipeline allows multiple commands to be queued and executed together in a batch,
+    reducing network round-trips.
+    """
     pipe = redis_client.pipeline()
     for segment in segment_names:
         pipe.hincrby(redis_key, segment, 1)

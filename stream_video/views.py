@@ -8,6 +8,8 @@ from django.db import IntegrityError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+
+from utils.redis.redis_helpers import increment_segment_activity
 from .serializers import UploadVideoSerializer, UpdateLastStreamedPoint, SegmentActivitySerializer
 from .tasks import update_last_streamed_segment, process_video
 from .models import Video, VideoSegment, get_video_by_uuid
@@ -205,7 +207,7 @@ class UpdateLastStreamedPointApi(APIView):
         return Response({"message": "mpd_url updated successfully."}, status=status.HTTP_200_OK)
 
 
-class SegmentActivityApi(APIView):
+class SaveSegmentActivityApi(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, *args, **kwargs):
@@ -213,7 +215,20 @@ class SegmentActivityApi(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        video_uuid = serializer.validated_data['video_uuid']
+        # Fetch the video object dynamically using the UUID
+        video_uuid = kwargs.get('video_uuid')
+        if not video_uuid:
+            return Response({"error": "Video UUID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get video by video_uuid
+        try:
+            get_video_by_uuid(video_uuid=video_uuid)
+        except ObjectDoesNotExist as e:
+            return Response({"message": "Video not found for the given uuid"}, status=status.HTTP_400_BAD_REQUEST)
+
         segments = serializer.validated_data['segments']
+
+        # Update redis to save segment activity
+        increment_segment_activity(video_uuid, segments)
 
         return Response({"message": "Segment activity updated"}, status=status.HTTP_200_OK)
