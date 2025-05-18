@@ -22,6 +22,7 @@ from django_filters import rest_framework as filters
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 import logging
+from utils.redis.redis_config import redis_client_without_decoded_response
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,7 @@ class GetVideoDetail(generics.RetrieveAPIView):
 # If the limit is exceeded, the user will be blocked
 @method_decorator(ratelimit(key='user', rate='10/m', block=True), name='dispatch')
 class ServeMPDFile(APIView):
+    permission_classes = [IsAuthenticated]
 
     def get(self, request, video_uuid, *args, **kwargs):
 
@@ -146,39 +148,28 @@ class ServeSegmentFile(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request, video_uuid, segment_name, *args, **kwargs):
-        environment = settings.ENVIRONMENT
+        redis_key = f"segment_file:{video_uuid}:{segment_name}"
 
-        last_played_second = request.query_params.get("playbackTime", None)
+        # Fetch the segment file from Redis
+        cached_segment = redis_client_without_decoded_response.get(redis_key)
+        if cached_segment:
+            print("Serving segment file from redis", flush=True)
+            return HttpResponse(cached_segment, content_type='application/dash+xml')
 
+        print("Segment file not found in redis cache", flush=True)
         try:
-            web_host = settings.WEB_HOST
-            web_port = settings.WEB_PORT
-
-            domain = f'http://{web_host}:{web_port}'
-
-            if environment == "production":
-                segment_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid),
-                                                'segments',
-                                                segment_name)
-            else:
-                segment_file_url = os.path.join(domain, 'media', 'stream_video', 'chunks', str(video_uuid), 'segments',
-                                                segment_name)
+            segment_file_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(video_uuid),
+                                            'segments', segment_name)
 
             response = requests.get(segment_file_url, stream=True)
 
             if response.status_code == 200:
-                # Saving the last streamed point for the user using celery worker
-                if last_played_second:
-                    update_last_streamed_segment.delay(
-                        user_id=request.user.id, video_uuid=video_uuid, last_played_second=last_played_second
-                    )
-
                 return HttpResponse(response.content, content_type='application/dash+xml')
             else:
-                return Response({"message": "Failed to retrieve the MPD file"}, status=status.HTTP_404_NOT_FOUND)
+                return Response({"message": "Failed to retrieve the Segment file"}, status=status.HTTP_404_NOT_FOUND)
 
         except requests.RequestException as e:
-            return Response({"message": f"Error retrieving video MPD file: {str(e)}"},
+            return Response({"message": f"Error retrieving video segment file: {str(e)}"},
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

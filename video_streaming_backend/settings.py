@@ -220,6 +220,14 @@ REDIS_PORT = os.environ.get('REDIS_PORT')
 REDIS_DB = os.environ.get('REDIS_DB')
 PRESIGNED_URL_EXPIRY_TIME = 3600
 
+SEGMENT_ACTIVITY_EXPIRY = 3600  # 1 hour
+CACHED_SEGMENT_EXPIRY = 3600  # 1 hour
+
+# If a segment file accessed 'SEGMENT_POPULARITY_THRESHOLD' times
+# before expiring withing the given 'SEGMENT_ACTIVITY_EXPIRY' time,
+# the file will be cached to redis
+SEGMENT_POPULARITY_THRESHOLD = 5
+
 # Celery configurations
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = 'django-db'
@@ -234,8 +242,6 @@ CELERY_RESULT_EXTENDED = True
 
 # Rate limit view
 RATELIMIT_VIEW = 'rate_limit.views.ratelimit_view'
-
-SEGMENT_ACTIVITY_EXPIRY = 3600  # 1 hour
 
 print(f"The environment is {ENVIRONMENT}", flush=True)
 

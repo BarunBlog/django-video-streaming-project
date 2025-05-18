@@ -12,6 +12,9 @@ from . import models
 import shutil
 import boto3
 import subprocess
+import requests
+from utils.redis.redis_config import redis_client
+import json
 
 logger = get_task_logger(__name__)
 
@@ -167,7 +170,8 @@ def save_segments_to_db(self, setup_data):
 
     for root, dirs, files in os.walk(segments_path):
         for file in files:
-            segment_url = os.path.join(segments_path, file)
+            segment_url = os.path.join(settings.MEDIA_URL, 'stream_video', 'chunks', str(setup_data["video_uuid"]),
+                                       'segments', file)
             VideoSegment.objects.create(video=video, segment_name=file, segment_url=segment_url)
 
     # Saving the mpd url of the s3 bucket
@@ -253,3 +257,52 @@ def update_last_streamed_segment(self, user_id: int, video_uuid: str, last_playe
     logger.info("Last streamed point updated successfully.")
     self.update_state(state=states.SUCCESS, meta={"status": "Completed"})
     return {"status": "Completed", "user_id": user_id, "video_uuid": video_uuid}
+
+
+@app.task(bind=True, name="cache_popular_segment_file", max_retries=1, queue="high_priority", priority=10)
+def cache_popular_segment_file(self, video_uuid: str, segment_name: str):
+    logger.info("Start caching the popular segment file")
+
+    try:
+        # Fetch video segment from db
+        segment: VideoSegment = VideoSegment.objects.select_related("video").get(
+            video__uuid=video_uuid,
+            segment_name=segment_name
+        )
+    except VideoSegment.DoesNotExist:
+        logger.error(f"Segment not found: {segment_name} for video {video_uuid}")
+        return
+
+    if not segment.segment_url:
+        logger.error(f"No segment_url found in DB for segment {segment_name}")
+        return
+
+    # Download segment file from the s3 bucket
+    logger.info(f"Downloading the segment file {segment_name} before caching")
+    try:
+        response = requests.get(segment.segment_url, timeout=10)
+        response.raise_for_status()
+        segment_bytes = response.content
+    except requests.RequestException as e:
+        logger.error(f"Failed to download segment {segment_name}: {e}")
+        return
+
+    # Cache the segment file in redis
+    logger.info("Caching the segment file in redis")
+    segment_cache_key = f"segment_file:{video_uuid}:{segment_name}"
+    redis_client.set(segment_cache_key, segment_bytes, ex=settings.CACHED_SEGMENT_EXPIRY)
+
+    # Update is_cached flag in presigned_urls hash
+    logger.info(f"Updating is_cached flag for the segment {segment_name}")
+
+    presigned_urls_key = f"presigned_urls:{video_uuid}"
+    try:
+        segment_data_raw = redis_client.hget(presigned_urls_key, segment_name)
+        if segment_data_raw:
+            segment_data = json.loads(segment_data_raw)
+            segment_data["is_cached"] = "true"
+            redis_client.hset(presigned_urls_key, segment_name, json.dumps(segment_data))
+    except Exception as e:
+        logger.info(f"Failed to update is_cached flag for {segment_name}: {e}")
+
+    logger.info(f"Successfully cached segment {segment_name} for video {video_uuid}")

@@ -80,6 +80,12 @@ class GetVideoDetailSerializer(serializers.ModelSerializer):
         presigned_urls = get_presigned_urls(video_uuid=obj.uuid)
         if presigned_urls:
             print("Find presigned urls in the redis server", flush=True)
+
+            # Convert string "true"/"false" to actual booleans
+            for segment_name, data in presigned_urls.items():
+                if isinstance(data, dict) and "is_cached" in data:
+                    data["is_cached"] = data["is_cached"].lower() == "true"
+                    
             return presigned_urls
 
         print("Generating presigned urls for the video segments", flush=True)

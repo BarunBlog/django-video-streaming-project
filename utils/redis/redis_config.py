@@ -7,3 +7,10 @@ redis_client = redis.StrictRedis(
     db=settings.REDIS_DB,
     decode_responses=True  # Automatically decode byte strings to strings
 )
+
+redis_client_without_decoded_response = redis.StrictRedis(
+    host=settings.REDIS_HOST,
+    port=settings.REDIS_PORT,
+    db=settings.REDIS_DB,
+    decode_responses=False
+)
