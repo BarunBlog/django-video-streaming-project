@@ -263,6 +263,9 @@ def update_last_streamed_segment(self, user_id: int, video_uuid: str, last_playe
 def cache_popular_segment_file(self, video_uuid: str, segment_name: str):
     logger.info("Start caching the popular segment file")
 
+    # Mark the task as "Processing"
+    self.update_state(state=states.STARTED, meta={"status": "Processing"})
+
     try:
         # Fetch video segment from db
         segment: VideoSegment = VideoSegment.objects.select_related("video").get(
@@ -270,12 +273,16 @@ def cache_popular_segment_file(self, video_uuid: str, segment_name: str):
             segment_name=segment_name
         )
     except VideoSegment.DoesNotExist:
-        logger.error(f"Segment not found: {segment_name} for video {video_uuid}")
-        return
+        error_message = f"Segment not found: {segment_name} for video {video_uuid}"
+        logger.error(error_message)
+        self.update_state(state=states.FAILURE, meta={"status": error_message})
+        raise Ignore()  # Skip further processing
 
     if not segment.segment_url:
-        logger.error(f"No segment_url found in DB for segment {segment_name}")
-        return
+        warning_message = f"No segment_url found in DB for segment {segment_name}"
+        logger.warn(warning_message)
+        self.update_state(state=states.REJECTED, meta={"status": warning_message})
+        raise Ignore()  # Skip further processing
 
     # Download segment file from the s3 bucket
     logger.info(f"Downloading the segment file {segment_name} before caching")
@@ -284,8 +291,13 @@ def cache_popular_segment_file(self, video_uuid: str, segment_name: str):
         response.raise_for_status()
         segment_bytes = response.content
     except requests.RequestException as e:
-        logger.error(f"Failed to download segment {segment_name}: {e}")
-        return
+        error_message = f"Failed to download segment {segment_name}: {e}"
+        logger.error(error_message)
+        self.update_state(state=states.FAILURE, meta={"status": error_message})
+
+        retry_in = 10
+        logger.info(f"Retrying in {retry_in} seconds...")
+        raise self.retry(exc=e, countdown=retry_in)
 
     # Cache the segment file in redis
     logger.info("Caching the segment file in redis")
@@ -302,7 +314,12 @@ def cache_popular_segment_file(self, video_uuid: str, segment_name: str):
             segment_data = json.loads(segment_data_raw)
             segment_data["is_cached"] = "true"
             redis_client.hset(presigned_urls_key, segment_name, json.dumps(segment_data))
+            redis_client.expire(presigned_urls_key, settings.CACHED_SEGMENT_EXPIRY)
     except Exception as e:
-        logger.info(f"Failed to update is_cached flag for {segment_name}: {e}")
+        error_message = f"Failed to update is_cached flag for {segment_name}: {e}"
+        logger.error(error_message)
+        self.update_state(state=states.FAILURE, meta={"status": error_message})
 
     logger.info(f"Successfully cached segment {segment_name} for video {video_uuid}")
+    self.update_state(state=states.SUCCESS, meta={"status": "Completed"})
+    return "Task Successful"

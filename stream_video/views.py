@@ -121,7 +121,7 @@ class ServeMPDFile(APIView):
         # Get video object by uuid
         try:
             video: Video = Video.objects.get(uuid=video_uuid)
-        except  Video.objects.get:
+        except Video.DoesNotExist:
             return Response({"message": "Video not found"}, status=status.HTTP_404_NOT_FOUND)
 
         if not video.mpd_file_url:
