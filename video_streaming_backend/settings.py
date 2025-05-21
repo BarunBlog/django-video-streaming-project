@@ -14,6 +14,7 @@ import os
 from pathlib import Path
 from datetime import timedelta
 import dj_database_url
+from redis.cluster import ClusterNode
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -229,12 +230,12 @@ REDIS_CLUSTER_HOST6 = os.environ.get('REDIS_CLUSTER_HOST6')
 REDIS_CLUSTER_PORT = os.environ.get('REDIS_CLUSTER_PORT')
 
 REDIS_CLUSTER_NODES = [
-    {"host": REDIS_CLUSTER_HOST1, "port": REDIS_CLUSTER_PORT},
-    {"host": REDIS_CLUSTER_HOST2, "port": REDIS_CLUSTER_PORT},
-    {"host": REDIS_CLUSTER_HOST3, "port": REDIS_CLUSTER_PORT},
-    {"host": REDIS_CLUSTER_HOST4, "port": REDIS_CLUSTER_PORT},
-    {"host": REDIS_CLUSTER_HOST5, "port": REDIS_CLUSTER_PORT},
-    {"host": REDIS_CLUSTER_HOST6, "port": REDIS_CLUSTER_PORT},
+    ClusterNode(REDIS_CLUSTER_HOST1, REDIS_CLUSTER_PORT),
+    ClusterNode(REDIS_CLUSTER_HOST2, REDIS_CLUSTER_PORT),
+    ClusterNode(REDIS_CLUSTER_HOST3, REDIS_CLUSTER_PORT),
+    ClusterNode(REDIS_CLUSTER_HOST4, REDIS_CLUSTER_PORT),
+    ClusterNode(REDIS_CLUSTER_HOST5, REDIS_CLUSTER_PORT),
+    ClusterNode(REDIS_CLUSTER_HOST6, REDIS_CLUSTER_PORT),
 ]
 
 PRESIGNED_URL_EXPIRY_TIME = 3600

@@ -18,11 +18,11 @@ from django.conf import settings
 
 # Redis cluster client configuration
 redis_client = redis.RedisCluster(
-    host=settings.REDIS_CLUSTER_NODES,
+    startup_nodes=settings.REDIS_CLUSTER_NODES,
     decode_responses=True  # Automatically decode byte strings to strings
 )
 
 redis_client_without_decoded_response = redis.RedisCluster(
-    host=settings.REDIS_CLUSTER_NODES,
+    startup_nodes=settings.REDIS_CLUSTER_NODES,
     decode_responses=False
 )
