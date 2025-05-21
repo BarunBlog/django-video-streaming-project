@@ -214,10 +214,29 @@ CORS_ALLOW_HEADERS = ('content-type', 'accept', 'accept-encoding', 'authorizatio
 #     "PASSWORD": os.environ.get("RABBITMQ_PASSWORD", "guest"),
 # }
 
-# Redis configurations
+# Redis worker configurations
 REDIS_HOST = os.environ.get('REDIS_HOST')
 REDIS_PORT = os.environ.get('REDIS_PORT')
 REDIS_DB = os.environ.get('REDIS_DB')
+
+# Redis Cluster configurations
+REDIS_CLUSTER_HOST1 = os.environ.get('REDIS_CLUSTER_HOST1')
+REDIS_CLUSTER_HOST2 = os.environ.get('REDIS_CLUSTER_HOST2')
+REDIS_CLUSTER_HOST3 = os.environ.get('REDIS_CLUSTER_HOST3')
+REDIS_CLUSTER_HOST4 = os.environ.get('REDIS_CLUSTER_HOST4')
+REDIS_CLUSTER_HOST5 = os.environ.get('REDIS_CLUSTER_HOST5')
+REDIS_CLUSTER_HOST6 = os.environ.get('REDIS_CLUSTER_HOST6')
+REDIS_CLUSTER_PORT = os.environ.get('REDIS_CLUSTER_PORT')
+
+REDIS_CLUSTER_NODES = [
+    {"host": REDIS_CLUSTER_HOST1, "port": REDIS_CLUSTER_PORT},
+    {"host": REDIS_CLUSTER_HOST2, "port": REDIS_CLUSTER_PORT},
+    {"host": REDIS_CLUSTER_HOST3, "port": REDIS_CLUSTER_PORT},
+    {"host": REDIS_CLUSTER_HOST4, "port": REDIS_CLUSTER_PORT},
+    {"host": REDIS_CLUSTER_HOST5, "port": REDIS_CLUSTER_PORT},
+    {"host": REDIS_CLUSTER_HOST6, "port": REDIS_CLUSTER_PORT},
+]
+
 PRESIGNED_URL_EXPIRY_TIME = 3600
 
 SEGMENT_ACTIVITY_EXPIRY = 3600  # 1 hour
