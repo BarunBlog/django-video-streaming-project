@@ -27,6 +27,15 @@ services:
     networks:
       - redis-network
 
+  nfs-server:
+    image: itsthenetwork/nfs-server-alpine:latest
+    container_name: nfs-server
+    environment:
+      - SHARED_DIRECTORY=/nfsshare
+    volumes:
+      - nfs_share_data:/nfsshare
+    privileged: true
+  
   # Web server
   web:
     dns:
@@ -40,7 +49,7 @@ services:
     command: sh ./run_web.sh
     volumes:
       - .:/app
-      - ~/nfs_shared_storage:/mnt/shared_storage
+      - nfs_share_data:/mnt/shared_storage
       - static_volume:/app/static
     ports:
       - "8000:8000"
@@ -73,6 +82,7 @@ services:
       - redis-network  # Connect the web service to both networks
     depends_on:
       - dev-db
+      - nfs-server
 
   nginx:
     image: nginx:1.23-alpine
@@ -113,11 +123,13 @@ services:
     command: sh ./run_celery.sh
     volumes:
       - .:/app
-      - ~/nfs_shared_storage:/mnt/shared_storage
+      - nfs_share_data:/mnt/shared_storage
     networks:
       - backend-network
       - worker-network
       - redis-network # Connect the worker to both networks
+    depends_on:
+      - nfs-server
 
   worker2:
     build:
@@ -144,11 +156,13 @@ services:
     command: sh ./run_celery.sh
     volumes:
       - .:/app
-      - ~/nfs_shared_storage:/mnt/shared_storage
+      - nfs_share_data:/mnt/shared_storage
     networks:
       - backend-network
       - worker-network
       - redis-network # Connect the worker to both networks
+    depends_on:
+      - nfs-server
 
 
 networks:
@@ -165,3 +179,4 @@ networks:
 volumes:
   postgres-db:
   static_volume:
+  nfs_share_data:
